@@ -1,0 +1,21 @@
+version: '2.1'
+
+services:
+  mongodb:
+    image: mongo:3.6.9
+    mem_limit: 350m
+    ports:
+      - "27018:27017"
+    command: mongod --smallfiles
+    volumes:
+    - /data/db
+
+#  pokemon-easy-catch-backend:
+#    image: pokemon-catch-backend:0.0.1-SNAPSHOT
+#    mem_limit: 1g
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    depends_on:
+#      - mongodb
