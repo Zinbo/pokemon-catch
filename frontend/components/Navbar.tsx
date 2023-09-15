@@ -3,6 +3,7 @@
 import {Box, Flex, Link, Stack, Text, useBreakpointValue, useColorModeValue,} from '@chakra-ui/react'
 import localFont from 'next/font/local'
 import NextLink from 'next/link'
+import Image from "next/image";
 
 const pokemon = localFont({
     src: [
@@ -29,15 +30,7 @@ export default function Navbar() {
                 borderColor={useColorModeValue('gray.200', 'gray.900')}
                 align={'center'}>
                 <Flex flex={{ base: 1 }} justify={{ base: 'center', md: 'start' }}>
-                    <Text
-                        textAlign={useBreakpointValue({ base: 'center', md: 'left' })}
-                        fontFamily={'heading'}
-                        fontSize='3xl'
-                        style={{WebkitTextStroke: '2px #356ABC'}}
-                        color={useColorModeValue('#FFCD00', 'white')}
-                    className={pokemon.className}>
-                        Pokemon Catch
-                    </Text>
+                    <Image src={"/logo.png"} alt={"logo"} width={223} height={40}/>
                 </Flex>
             </Flex>
         </Box>
