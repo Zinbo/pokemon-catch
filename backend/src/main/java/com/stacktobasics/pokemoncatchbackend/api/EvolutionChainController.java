@@ -20,6 +20,7 @@ public class EvolutionChainController {
 
     @GetMapping
     public Iterable<EvolutionChain> getChains() {
-        return evolutionChainRepository.findAll();
+        Iterable<EvolutionChain> all = evolutionChainRepository.findAll();
+        return all;
     }
 }

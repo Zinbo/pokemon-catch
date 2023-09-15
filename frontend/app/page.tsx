@@ -1,37 +1,22 @@
-'use client';
-import React, {useEffect, useState} from "react";
-import AllPokemonToCollect from "@/app/AllPokemonToCollect";
-import PokemonToBreed from "@/app/PokemonToBreed";
-import PokemonToGetInSelectedGame from "@/app/PokemonToGetInSelectedGame";
-import ErrorDialog from "@/components/ErrorDialog";
-import User from "@/data/User";
+'use client'
+import {Flex, Grid, GridItem, Text} from "@chakra-ui/react";
+import Legend from "@/app/Legend";
+import AddGame from "@/app/AddGame";
+import Search from "@/app/Search";
+import Image from "next/image";
+import {StarIcon} from "@chakra-ui/icons";
+import PokemonGrid from "@/app/PokemonGrid";
 
 export default function Home() {
 
-    const [user, setUser] = useState<null | User>(null);
-    const [error, setError] = useState(false);
-
-    const getUserDetails = async () => {
-        const res = await fetch(`/users/123`);
-        if (res.ok) {
-            setUser(await res.json());
-        } else {
-            setError(true);
-        }
-    }
-
-    useEffect(() => {
-        getUserDetails()
-    }, [])
-
     return (
-        <>
-            {error && <ErrorDialog errorTitle="Could not load Pokemon data" open={true} onClose={() => {
-                setError(false);
-            }}/>}
-            <AllPokemonToCollect/>
-            <PokemonToBreed/>
-            <PokemonToGetInSelectedGame/>
-        </>
+        <Flex direction={"column"} rowGap={5}>
+            <Flex justifyContent={"space-between"} gap={"50px"}>
+                <AddGame/>
+                <Search/>
+                <Legend/>
+            </Flex>
+            <PokemonGrid/>
+        </Flex>
     )
 }

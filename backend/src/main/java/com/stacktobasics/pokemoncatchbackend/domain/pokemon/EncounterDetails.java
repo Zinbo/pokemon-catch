@@ -6,6 +6,7 @@ import lombok.NonNull;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,17 +18,17 @@ public class EncounterDetails {
     private List<Encounter> encounters = new ArrayList<>();
 
     protected void addEncounter(int catchRate, @NonNull String location, @NonNull int gameId,
-                                @NonNull String method, @NonNull String condition) {
+                                @NonNull String method, @NonNull List<String> conditions) {
         Optional<Encounter> existingEncounter =
                 encounters.stream().filter(e -> e.getLocationName().equals(location) && e.getLocation().getGameId() == gameId
-                        && e.getMethod().equals(method) && e.getCondition().equals(condition)).findFirst();
+                        && e.getMethod().equals(method) && new HashSet<>(conditions).containsAll(e.getConditions())).findFirst();
         existingEncounter.ifPresentOrElse(
                 e -> {
                     e.increaseCatchRate(catchRate);
                     updateBestCatchRate(e);
                 },
                 () -> {
-                    Encounter e = new Encounter(catchRate, location, gameId, method, condition);
+                    Encounter e = new Encounter(catchRate, location, gameId, method, conditions);
                     encounters.add(e);
                     updateBestCatchRate(e);
                 });

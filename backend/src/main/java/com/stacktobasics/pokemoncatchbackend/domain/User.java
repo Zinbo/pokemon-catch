@@ -19,7 +19,7 @@ public class User {
     @Id
     String id;
     Set<Game> ownedGames = new HashSet<>();
-    Set<Pokemon> ownedPokemon = new HashSet<>();
+    Set<Integer> ownedPokemon = new HashSet<>();
 
     public void addGame(@NonNull String gameName, @NonNull GameRepository gameRepository) {
         Optional<Game> foundGame = gameRepository.findById(gameName);
@@ -38,7 +38,7 @@ public class User {
 
     public void addPokemon(@NonNull Integer pokedexNumber, @NonNull PokemonRepository pokemonRepository) {
         Optional<Pokemon> pokemon = pokemonRepository.findById(pokedexNumber);
-        pokemon.ifPresent(p -> ownedPokemon.add(p));
+        pokemon.ifPresent(p -> ownedPokemon.add(pokedexNumber));
     }
 
     public void removePokemon(@NonNull Integer pokedexNumber, @NonNull PokemonRepository pokemonRepository) {

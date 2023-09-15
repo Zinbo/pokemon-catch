@@ -1,0 +1,22 @@
+{
+  "name": "scraper",
+  "version": "1.0.0",
+  "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.3.30",
+    "@types/node": "^20.2.3",
+    "axios": "^1.4.0",
+    "cheerio": "^1.0.0-rc.12",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^16.0.3",
+    "googlemaps": "^1.12.0",
+    "node-html-parser": "^6.1.5",
+    "typescript": "^5.0.4"
+  },
+  "main": "scraper.ts",
+  "scripts": {
+    "start": "npx tsc scraper.ts && node scraper.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

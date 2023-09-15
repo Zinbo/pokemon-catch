@@ -10,8 +10,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
-import java.time.LocalTime;
 import java.util.*;
 
 @Component
@@ -70,20 +68,36 @@ public class PokeApiClient {
 
     public <T> T getDTO(String url, Class<T> clazz){
         if(cache.containsKey(url)) {
-            log.info("Returning object from cache for url: [{}]", url);
             return (T) cache.get(url);
         }
-        LocalTime before = LocalTime.now();
-        T dto = restTemplate.getForObject(url, clazz);
-        cache.put(url, dto);
-        LocalTime after = LocalTime.now();
-        log.info("Call to [{}] took [{}] milliseconds", url, Duration.between(before, after).toMillis());
-        return dto;
+        try {
+            T dto = restTemplate.getForObject(url, clazz);
+            cache.put(url, dto);
+            return dto;
+        } catch(HttpClientErrorException e) {
+            log.error("Could not get data at [{}]", url);
+            throw e;
+        }
     }
 
     public List<PokemonDTO> getPokemon() {
         if (shouldGetAllPokemon) return getAllPokemon();
-        return getFirst50Pokemon();
+        return getFirstXPokemon(50);
+    }
+
+
+    public PokemonDTO getPokemon(int id) {
+        String url = String.format("%s/pokemon/%s", POKEAPI_BASE_URL, id);
+        return getDTO(
+                url,
+                PokemonDTO.class);
+    }
+
+    public PokemonSpeciesDTO getPokemonSpecies(int id) {
+        String url = String.format("%s/pokemon-species/%s", POKEAPI_BASE_URL, id);
+        return getDTO(
+                url,
+                PokemonSpeciesDTO.class);
     }
 
     public List<GenerationDTO> getGenerations() {
@@ -97,9 +111,9 @@ public class PokeApiClient {
         return generations;
     }
 
-    private List<PokemonDTO> getFirst50Pokemon() {
+    private List<PokemonDTO> getFirstXPokemon(int bound) {
         List<PokemonDTO> pokemons = new ArrayList<>();
-        for (int i = 1; i <= 50; i++) {
+        for (int i = 1; i <= bound; i++) {
             if(i % 10 == 0) log.info("got {} pokemon...", i);
             String url = String.format("%s/pokemon/%s", POKEAPI_BASE_URL, i);
             PokemonDTO pokemon = getDTO(
@@ -110,37 +124,12 @@ public class PokeApiClient {
         return pokemons;
     }
 
-    public List<PokemonEvolutionDTO> getEvolutionChains() {
-        if(shouldGetAllPokemon) return getAllEvolutionChains();
-        return getFirstXEvolutionChains();
-    }
 
-    private List<PokemonEvolutionDTO> getFirstXEvolutionChains() {
-        List<PokemonEvolutionDTO> allEvolutionChains = new ArrayList<>();
-        for (int i = 1; i <= 20; i++) {
-            String url = String.format("%s/evolution-chain/%s", POKEAPI_BASE_URL, i);
-            PokemonEvolutionDTO pokemon = getDTO(
-                    url,
-                    PokemonEvolutionDTO.class);
-            allEvolutionChains.add(pokemon);
-        }
-        return allEvolutionChains;
-    }
-
-    private List<PokemonEvolutionDTO> getAllEvolutionChains() {
-        boolean done = false;
-        List<PokemonEvolutionDTO> allEvolutionChains = new ArrayList<>();
-        int i = 1;
-        while(!done) {
-            try {
-                String url = String.format("%s/evolution-chain/%s", POKEAPI_BASE_URL, i++);
-                allEvolutionChains.add(getDTO(url, PokemonEvolutionDTO.class));
-            } catch(HttpClientErrorException e) {
-                if(e.getRawStatusCode() == 404) done = true;
-                else throw e;
-            }
-        }
-        return allEvolutionChains;
+    public PokemonEvolutionDTO getEvolutionChain(int id) {
+        String url = String.format("%s/evolution-chain/%s", POKEAPI_BASE_URL, id);
+        return getDTO(
+                url,
+                PokemonEvolutionDTO.class);
     }
 
     private List<PokemonDTO> getAllPokemon() {
