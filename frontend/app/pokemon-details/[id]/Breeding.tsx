@@ -6,6 +6,24 @@ import React, {useEffect, useState} from "react";
 import {Box, Card, CardBody, CardHeader, Flex, Heading, Text} from "@chakra-ui/react";
 import Xarrow from "react-xarrows";
 
+export function canBeBred(evolutionChain: EvolutionChainV2, user: User) {
+    return (!!findOwnedPokemon(evolutionChain.chain, user.ownedPokemon));
+}
+
+const findOwnedPokemon = (next: EvolvesTo, ownedPokemon: number[]) => {
+    if (ownedPokemon.includes(next.pokedexNumber)) return next;
+
+    if (!next?.evolvesTo?.length) return null;
+    let found = null;
+    next.evolvesTo.forEach(e => {
+        const potential = findOwnedPokemon(e, ownedPokemon);
+        if (potential) {
+            found = potential;
+            return;
+        }
+    })
+    return found;
+}
 
 export default function Breeding({user, pokemon, evolutionChain}: {
     user: User,
@@ -22,7 +40,7 @@ export default function Breeding({user, pokemon, evolutionChain}: {
     }, [evolutionChain]);
 
     const calculateBreedingChain = () => {
-        const ownedPokemon = findOwnedPokemon(evolutionChain.chain);
+        const ownedPokemon = findOwnedPokemon(evolutionChain.chain, user.ownedPokemon);
         if (!ownedPokemon) return {breedingChain: [], arrows: []};
 
         const breedingChain: React.JSX.Element[] = [];
@@ -37,21 +55,6 @@ export default function Breeding({user, pokemon, evolutionChain}: {
 
         if (!getBreedingChain(evolutionChain.chain, pokemon.pokedexNumber, breedingChain, arrows, "egg")) return {breedingChain: [], arrows: []};
         return {breedingChain, arrows}
-    }
-
-    const findOwnedPokemon = (next: EvolvesTo) => {
-        if (user.ownedPokemon.includes(next.pokedexNumber)) return next;
-
-        if (!next?.evolvesTo?.length) return null;
-        let found = null;
-        next.evolvesTo.forEach(e => {
-            const potential = findOwnedPokemon(e);
-            if (potential) {
-                found = potential;
-                return;
-            }
-        })
-        return found;
     }
 
     const getBreedingChain = (next: EvolvesTo, toFind: number, chain: React.JSX.Element[], arrows: React.JSX.Element[], prevName: string) => {

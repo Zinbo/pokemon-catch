@@ -1,9 +1,9 @@
-interface Location {
+export interface Location {
     name: string
     gameId: number
 }
 
-interface Encounter {
+export interface Encounter {
     catchRate: number
     location: Location
     method: string
@@ -11,7 +11,7 @@ interface Encounter {
 }
 
 
-interface EncounterDetails {
+export interface EncounterDetails {
     bestCatchRate: number
     encounters: Encounter[]
 }

@@ -1,10 +1,10 @@
-import {Box, Card, CardBody, CardHeader, Heading} from "@chakra-ui/react";
-import {DataTable} from "@/components/DataTable";
+import {Box, Card, CardBody, CardHeader, Checkbox, Heading} from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
 import {createColumnHelper} from "@tanstack/table-core";
-import Pokemon from "@/data/Pokemon";
+import Pokemon, {Encounter} from "@/data/Pokemon";
 import Game from "@/data/Game";
 import CustomTable from "@/components/CustomTable";
+import User from "@/data/User";
 
 type EncounterRow = {
     method: string;
@@ -14,7 +14,15 @@ type EncounterRow = {
     chance: number;
 };
 
-export default function Encounters({pokemon, games} : {pokemon: Pokemon, games : Game[]}) {
+export function canCatch(pokemon: Pokemon, ownedGames: Game[]) {
+    return (!!pokemon.encounterDetails.encounters.find(e => canGetEncounter(e, ownedGames)));
+}
+
+function canGetEncounter(encounter : Encounter, ownedGames: Game[]) {
+    return (!!ownedGames.find(g => g.id === encounter.location.gameId));
+}
+
+export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, games : Game[], user: User}) {
     const columnHelper = createColumnHelper<EncounterRow>();
     const columns = [
         columnHelper.accessor("method", {
@@ -49,7 +57,8 @@ export default function Encounters({pokemon, games} : {pokemon: Pokemon, games :
     }, [pokemon]);
 
     const calculateEncounters = () => {
-        const rows = pokemon.encounterDetails.encounters.map(encounter => {
+        const rows = pokemon.encounterDetails.encounters.flatMap(encounter => {
+            if(!canGetEncounter(encounter, user.ownedGames)) return [];
             return {
                 method: encounter.method,
                 location: encounter.location.name,
@@ -69,6 +78,7 @@ export default function Encounters({pokemon, games} : {pokemon: Pokemon, games :
             </CardHeader>
 
             <CardBody>
+                <Checkbox>Show all encounters</Checkbox>
                 <Box style={{border: "1px solid #E2E8F0", borderRadius: "12px"}}>
                     <CustomTable columns={columns} data={encounters}/>
                 </Box>

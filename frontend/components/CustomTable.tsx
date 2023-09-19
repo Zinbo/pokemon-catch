@@ -32,9 +32,7 @@ export default function CustomTable<Data extends object>({
         getSortedRowModel: getSortedRowModel(),
         state: {
             sorting
-        },
-        //
-        debugTable: true,
+        }
     })
 
     return (
