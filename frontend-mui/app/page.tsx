@@ -23,7 +23,6 @@ export default function Home() {
         } else {
             setError(true);
         }
-
     }
 
     const getPokemon = async() => {

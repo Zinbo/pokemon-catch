@@ -16,7 +16,7 @@ public class EvolutionCriteria {
     private List<TriggerCriterion> triggerCriteria;
     private String trigger;
 
-    protected EvolutionCriteria(@NonNull List<Pair<String, String>> criteria, @NonNull String trigger) {
+    public EvolutionCriteria(@NonNull List<Pair<String, String>> criteria, @NonNull String trigger) {
         this.triggerCriteria = criteria.stream().map(stringStringPair -> new TriggerCriterion(stringStringPair.getFirst(), stringStringPair.getSecond())).collect(Collectors.toList());
         this.trigger = trigger;
     }

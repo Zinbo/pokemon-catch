@@ -31,6 +31,7 @@ export default function Search() {
                     <MenuList>
                         <MenuGroup title='Filters'>
                             <MenuItem><Checkbox defaultChecked>Hide Owned Pokemon</Checkbox></MenuItem>
+                            <MenuItem><Checkbox defaultChecked>Hide Pokemon that cannot be caught</Checkbox></MenuItem>
                         </MenuGroup>
                         <MenuGroup title='Show Pokemon From...'>
                             <MenuItem><Select onClick={e => e.stopPropagation()} placeholder='Select game'>

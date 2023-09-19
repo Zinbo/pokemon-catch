@@ -7,7 +7,7 @@ interface Encounter {
     catchRate: number
     location: Location
     method: string
-    condition: string
+    conditions: string[]
 }
 
 

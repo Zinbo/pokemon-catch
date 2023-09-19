@@ -2,8 +2,13 @@ package com.stacktobasics.pokemoncatchbackend;
 
 import com.stacktobasics.pokemoncatchbackend.domain.GameRepository;
 import com.stacktobasics.pokemoncatchbackend.domain.PokemonRepository;
+import com.stacktobasics.pokemoncatchbackend.domain.evolution.Baby;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChain;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChainRepository;
+import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionCriteria;
+import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2;
+import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2Repository;
+import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolvesTo;
 import com.stacktobasics.pokemoncatchbackend.domain.game.Game;
 import com.stacktobasics.pokemoncatchbackend.domain.pokemon.Pokemon;
 import com.stacktobasics.pokemoncatchbackend.infra.PokeApiClient;
@@ -44,14 +49,16 @@ public class PopulateDbWithPokeData {
     private final GameRepository gameRepository;
     private final PokemonRepository pokemonRepository;
     private final EvolutionChainRepository evolutionChainRepository;
+    private final EvolutionChainV2Repository evolutionChainV2Repository;
     private final Pattern idFromUrl = Pattern.compile("[^v](\\d+)");
 
     public PopulateDbWithPokeData(PokeApiClient client, GameRepository gameRepository,
-                                  PokemonRepository pokemonRepository, EvolutionChainRepository evolutionChainRepository) {
+                                  PokemonRepository pokemonRepository, EvolutionChainRepository evolutionChainRepository, EvolutionChainV2Repository evolutionChainV2Repository) {
         this.client = client;
         this.gameRepository = gameRepository;
         this.pokemonRepository = pokemonRepository;
         this.evolutionChainRepository = evolutionChainRepository;
+        this.evolutionChainV2Repository = evolutionChainV2Repository;
     }
 
 
@@ -109,7 +116,7 @@ public class PopulateDbWithPokeData {
                             encounter.versionDetails.forEach(v ->
                                     v.encounterDetails.forEach(ed -> {
                                         String locationArea = client.getLocationName(encounter.locationArea.url);
-                                        if(locationArea.toLowerCase().contains("unknown")) return;
+                                        if (locationArea.toLowerCase().contains("unknown")) return;
                                         NamesDTO names = client.getNames(v.version.url);
                                         int gameId = names.id;
 
@@ -138,16 +145,30 @@ public class PopulateDbWithPokeData {
     }
 
     public void initialiseEvolutionChains(int start, int end) {
-        for(int i = start; i <= end; i++) {
+        for (int i = start; i <= end; i++) {
 
             try {
                 log.info("Saving evolution chain [{}]", i);
                 var evolutionDTO = client.getEvolutionChain(i);
                 var evolutionChain = getEvolutionChain(evolutionDTO);
                 evolutionChainRepository.save(evolutionChain);
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode().value() != 404) throw e;
             }
-            catch(HttpClientErrorException e) {
-                if(e.getStatusCode().value() != 404) throw e;
+        }
+        log.info("Finished saving all evolution chains");
+    }
+
+    public void initialiseEvolutionChainsV2(int start, int end) {
+        for (int i = start; i <= end; i++) {
+
+            try {
+                log.info("Saving evolution chain [{}]", i);
+                var evolutionDTO = client.getEvolutionChain(i);
+                var chain = getEvolutionChainV2(evolutionDTO);
+                evolutionChainV2Repository.save(chain);
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode().value() != 404) throw e;
             }
         }
         log.info("Finished saving all evolution chains");
@@ -175,22 +196,22 @@ public class PopulateDbWithPokeData {
         EvolutionChain ec = new EvolutionChain(dto.id);
 
         // set baby if exists
-        ChainDTO chainDTO = dto.chain;
-        NamedResourceDTO speciesNavigationDTO = chainDTO.species;
+        EvolvesToDTO EvolvesToDTO = dto.chain;
+        NamedResourceDTO speciesNavigationDTO = EvolvesToDTO.species;
         int pokedexNumber = getPokedexNumberFromUrl(speciesNavigationDTO);
-        if (chainDTO.isBaby) {
+        if (EvolvesToDTO.isBaby) {
             ec.setBaby(pokedexNumber, Optional.ofNullable(dto.babyTriggerItemDTO)
                     .map(babyTriggerItemDTO -> client.getEnglishName(babyTriggerItemDTO.url))
                     .orElse(null));
         }
 
-        if (!CollectionUtils.isEmpty(chainDTO.evolutionDetails)) {
+        if (!CollectionUtils.isEmpty(EvolvesToDTO.evolutionDetails)) {
             // It looks like all evolution details on the top level chain are empty
             // throw an exception if not so I can change the logic
             throw new InternalException("evolution details were not empty for pokemon " + pokedexNumber);
         }
 
-        List<EvolvesToDTO> evolvesTo = chainDTO.evolvesTo;
+        List<EvolvesToDTO> evolvesTo = EvolvesToDTO.evolvesTo;
         Queue<EvolutionNode> stack = new ArrayDeque<>();
         evolvesTo.stream().map(e -> new EvolutionNode(e, pokedexNumber)).forEach(stack::add);
         while (!stack.isEmpty()) {
@@ -205,6 +226,45 @@ public class PopulateDbWithPokeData {
             evolvesToDTO.evolvesTo.stream().map(e -> new EvolutionNode(e, to)).forEach(stack::add);
         }
         return ec;
+    }
+
+    private EvolutionChainV2 getEvolutionChainV2(PokemonEvolutionDTO dto) {
+        var chain = new EvolutionChainV2();
+        chain.setId(dto.id);
+
+        // set baby if exists
+        EvolvesToDTO evolvesToDTO = dto.chain;
+        NamedResourceDTO speciesNavigationDTO = evolvesToDTO.species;
+        int pokedexNumber = getPokedexNumberFromUrl(speciesNavigationDTO);
+        if (evolvesToDTO.isBaby) {
+            chain.setBaby(new Baby(pokedexNumber, Optional.ofNullable(dto.babyTriggerItemDTO)
+                    .map(babyTriggerItemDTO -> client.getEnglishName(babyTriggerItemDTO.url))
+                    .orElse(null)));
+        }
+
+        if (!CollectionUtils.isEmpty(evolvesToDTO.evolutionDetails)) {
+            // It looks like all evolution details on the top level chain are empty
+            // throw an exception if not so I can change the logic
+            throw new InternalException("evolution details were not empty for pokemon " + pokedexNumber);
+        }
+
+        chain.setChain(toEvolvesTo(evolvesToDTO));
+        return chain;
+    }
+    
+    private EvolvesTo toEvolvesTo(EvolvesToDTO evolvesToDTO) {
+        EvolvesTo evolvesTo = new EvolvesTo();
+        evolvesTo.setWaysToEvolve(evolvesToDTO.evolutionDetails.stream().map(ed -> {
+            List<Pair<String, String>> criteria = getCriteria(ed);
+            String trigger = client.getEnglishName(ed.trigger.url);
+            return new EvolutionCriteria(criteria, trigger);
+
+        }).toList());
+        evolvesTo.setPokedexNumber(getPokedexNumberFromUrl(evolvesToDTO.species));
+        evolvesTo.setName(evolvesToDTO.species.name);
+
+        evolvesTo.setEvolvesTo(evolvesToDTO.evolvesTo.stream().map(this::toEvolvesTo).toList());
+        return evolvesTo;
     }
 
     private List<Pair<String, String>> getCriteria(@NonNull EvolutionDetailsDTO ed) {

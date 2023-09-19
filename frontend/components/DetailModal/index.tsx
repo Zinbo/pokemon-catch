@@ -10,12 +10,18 @@ import {
     Text
 } from "@chakra-ui/react";
 import {DataTable} from "@/components/DataTable";
-import React, {RefObject, useRef} from "react";
+import React, {RefObject, useEffect, useRef, useState} from "react";
 import {createColumnHelper} from "@tanstack/table-core";
 import Image from "next/image";
-import Xarrow from "react-xarrows";
+import Xarrow, {xarrowPropsType} from "react-xarrows";
+import Pokemon from "@/data/Pokemon";
+import EvolutionChain from "@/data/EvolutionChain";
+import EvolutionChainV2, {EvolvesTo} from "@/data/EvolutionChainV2";
+import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
+import Breeding from "@/app/pokemon-details/[id]/Breeding";
+import User from "@/data/User";
 
-type Pokemon = {
+type EncounterRow = {
     method: string;
     location: string;
     game: string;
@@ -23,7 +29,7 @@ type Pokemon = {
     chance: number;
 };
 
-const data: Pokemon[] = [
+const data: EncounterRow[] = [
     {
         method: "Receive as gift",
         location: "Cerulean City",
@@ -40,9 +46,9 @@ const data: Pokemon[] = [
     },
 ];
 
-const columnHelper = createColumnHelper<Pokemon>();
+const columnHelper = createColumnHelper<EncounterRow>();
 
-export default function DetailModal({isOpen, onClose}: { isOpen: boolean, onClose: () => void }) {
+export default function Index({isOpen, onClose, pokemon, evolutionChain, user}: { isOpen: boolean, onClose: () => void, pokemon: Pokemon, evolutionChain: EvolutionChainV2, user: User }) {
     const columns = [
         columnHelper.accessor("method", {
             cell: (info) => info.getValue(),
@@ -69,7 +75,6 @@ export default function DetailModal({isOpen, onClose}: { isOpen: boolean, onClos
         })
     ];
 
-    const evoRefs: RefObject<any>[] = [useRef<any>(null), useRef<any>(null), useRef<any>(null)];
     const breedingRefs: RefObject<any>[] = [useRef<any>(null), useRef<any>(null), useRef<any>(null), useRef<any>(null)];
 
     const Lines = ({refs}: { refs: RefObject<any>[] }) => {
@@ -96,12 +101,12 @@ export default function DetailModal({isOpen, onClose}: { isOpen: boolean, onClos
         <Modal isOpen={isOpen} onClose={onClose}>
             <ModalOverlay/>
             <ModalContent flex={1} maxW="1000px">
-                <ModalHeader>Bulbasaur</ModalHeader>
+                <ModalHeader>{pokemon.name}</ModalHeader>
                 <ModalCloseButton/>
                 <ModalBody>
                     <Flex direction={"column"}>
                         <Box alignSelf={"center"}>
-                            <Image src={`/images/description/1.png`} width="95" height="95" alt="pokemon"/>
+                            <Image src={`/images/description/${pokemon.pokedexNumber}.png`} width="95" height="95" alt="pokemon"/>
                         </Box>
                         <Box>
                             <DataTable columns={columns} data={data}/>
@@ -113,26 +118,8 @@ export default function DetailModal({isOpen, onClose}: { isOpen: boolean, onClos
                                 Evolutions
                             </Text>
                         </Box>
-                        <Flex justifyContent={"space-between"}>
-                            <Image ref={evoRefs[0]} src={`/images/list/1.png`} width="96" height="96" alt="pokemon"/>
-                            <Image ref={evoRefs[1]} src={`/images/list/2.png`} width="96" height="96" alt="pokemon"/>
-                            <Image ref={evoRefs[2]} src={`/images/list/3.png`} width="96" height="96" alt="pokemon"/>
-                            <Lines refs={evoRefs}/>
-                        </Flex>
-                        <Box>
-                            <Text
-                                fontFamily={'heading'}
-                                fontSize='xl'>
-                                Breeding
-                            </Text>
-                        </Box>
-                        <Flex justifyContent={"space-between"}>
-                            <Image ref={breedingRefs[0]} src={`/images/list/3.png`} width="96" height="96" alt="pokemon"/>
-                            <Image ref={breedingRefs[1]} src={`/egg.svg`} width="96" height="96" alt="pokemon"/>
-                            <Image ref={breedingRefs[2]} src={`/images/list/2.png`} width="96" height="96" alt="pokemon"/>
-                            <Image ref={breedingRefs[3]} src={`/images/list/3.png`} width="96" height="96" alt="pokemon"/>
-                            <Lines refs={breedingRefs}/>
-                        </Flex>
+                        <Evolutions evolutionChain={evolutionChain}/>
+                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
                     </Flex>
                 </ModalBody>
             </ModalContent>

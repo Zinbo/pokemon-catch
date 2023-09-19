@@ -2,25 +2,33 @@ package com.stacktobasics.pokemoncatchbackend.api;
 
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChain;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChainRepository;
+import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2;
+import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2Repository;
+import com.stacktobasics.pokemoncatchbackend.domain.pokemon.Pokemon;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("evolution-chains")
 @Slf4j
 public class EvolutionChainController {
 
-    private final EvolutionChainRepository evolutionChainRepository;
+    private final EvolutionChainV2Repository evolutionChainRepository;
 
-    public EvolutionChainController(EvolutionChainRepository evolutionChainRepository) {
+    public EvolutionChainController(EvolutionChainV2Repository evolutionChainRepository) {
         this.evolutionChainRepository = evolutionChainRepository;
     }
 
     @GetMapping
-    public Iterable<EvolutionChain> getChains() {
-        Iterable<EvolutionChain> all = evolutionChainRepository.findAll();
-        return all;
+    public Iterable<EvolutionChainV2> getChains() {
+        return evolutionChainRepository.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<EvolutionChainV2> getEvolutionChainById(@PathVariable int id) {
+        return evolutionChainRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
