@@ -24,10 +24,12 @@ import Evolutions, {calculateChainCompletion} from "@/app/pokemon-details/[id]/E
 import Breeding, {canBeBred} from "@/app/pokemon-details/[id]/Breeding";
 import React, {useEffect, useState} from "react";
 import User from "@/data/User";
-import {ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
+import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
 import Encounters, {canCatch} from "@/app/pokemon-details/[id]/Encounters";
+import Link from "next/link";
 
-const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, 1017];
+const MAX_POKEDEX_NUMBER = 1017;
+const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
 const ROMAN_NUMERALS = ["I", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX", "X"];
 
 export default function Page({params}: {
@@ -95,7 +97,7 @@ export default function Page({params}: {
         const number = pokemon.pokedexNumber;
         const length = number.toString().length;
         let formattedNumber = "#";
-        [ ...Array(4-length) ].forEach(_ => formattedNumber += "0");
+        [...Array(4 - length)].forEach(_ => formattedNumber += "0");
         formattedNumber += number;
         return formattedNumber;
     }
@@ -104,8 +106,8 @@ export default function Page({params}: {
         const number = pokemon.pokedexNumber;
         let found = false;
         let generationIndex = 0;
-        while(!found) {
-            if(number <= GENERATION_ENDS[generationIndex]) found = true;
+        while (!found) {
+            if (number <= GENERATION_ENDS[generationIndex]) found = true;
             else generationIndex++;
         }
         return ROMAN_NUMERALS[generationIndex];
@@ -113,18 +115,18 @@ export default function Page({params}: {
 
     const getChainCompletionPercentage = () => {
         const result = calculateChainCompletion(evolutionChain, user);
-        return `${((result.noCaught/result.noInChain)*100).toFixed(2)}%`;
+        return `${((result.noCaught / result.noInChain) * 100).toFixed(2)}%`;
     }
 
     const Badges = () => {
-        const badges : React.JSX.Element[] = [];
-        if(user?.ownedPokemon.includes(pokemon.pokedexNumber)) badges.push(<Badge colorScheme='green'>Caught</Badge>)
+        const badges: React.JSX.Element[] = [];
+        if (user?.ownedPokemon.includes(pokemon.pokedexNumber)) badges.push(<Badge colorScheme='green'>Caught</Badge>)
         else badges.push(<Badge colorScheme='gray'>Not caught</Badge>)
 
-        if(canCatch(pokemon, user?.ownedGames)) badges.push(<Badge colorScheme='green'>Can catch</Badge>)
+        if (canCatch(pokemon, user?.ownedGames)) badges.push(<Badge colorScheme='green'>Can catch</Badge>)
         else badges.push(<Badge colorScheme='gray'>Can't catch</Badge>)
 
-        if(canBeBred(evolutionChain, user)) badges.push(<Badge colorScheme='green'>Can breed</Badge>)
+        if (canBeBred(evolutionChain, user)) badges.push(<Badge colorScheme='green'>Can breed</Badge>)
         else badges.push(<Badge colorScheme='gray'>Can't breed</Badge>)
 
         return (
@@ -144,7 +146,7 @@ export default function Page({params}: {
                     </BreadcrumbItem>
 
                     <BreadcrumbItem isCurrentPage>
-                        <BreadcrumbLink href='#'>Bulbasaur</BreadcrumbLink>
+                        <BreadcrumbLink href='#'>{pokemon.name}</BreadcrumbLink>
                     </BreadcrumbItem>
                 </Breadcrumb>
                 <Stack spacing='4'>
@@ -178,10 +180,14 @@ export default function Page({params}: {
                                     <CardFooter>
                                         <Flex gap={"10px"}>
                                             <Button rightIcon={<ExternalLinkIcon/>}>
-                                                Serebii
+                                                <Link
+                                                    href={`https://www.serebii.net/pokedex-swsh/${pokemon.name.toLowerCase()}/`}
+                                                    target={"_blank"}>Serebii</Link>
                                             </Button>
                                             <Button rightIcon={<ExternalLinkIcon/>}>
-                                                Bulbapedia
+                                                <Link
+                                                    href={`https://bulbapedia.bulbagarden.net/wiki/${pokemon.name}_(Pok%C3%A9mon)`}
+                                                    target={"_blank"}>Bulbapedia</Link>
                                             </Button>
                                         </Flex>
                                     </CardFooter>
@@ -203,10 +209,25 @@ export default function Page({params}: {
                     <Box>
                         <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
                     </Box>
-                    <Flex justifyContent={"flex-end"}>
-                        <Button rightIcon={<ArrowForwardIcon/>} colorScheme='teal' variant='outline'>
-                            Ivysaur
-                        </Button>
+                    <Flex justifyContent={"space-between"}>
+                        {pokemon.pokedexNumber > 1 &&
+                            (<Flex justifyContent={"start"} flex={1}>
+                                <Link href={`/pokemon-details/${pokemon.pokedexNumber - 1}`}>
+                                    <Button colorScheme='teal' variant='outline'>
+                                        <ArrowBackIcon/>
+                                    </Button>
+                                </Link>
+                            </Flex>)
+                        }
+                        {pokemon.pokedexNumber < MAX_POKEDEX_NUMBER &&
+                            (<Flex justifyContent={"end"} flex={1}>
+                            <Link href={`/pokemon-details/${pokemon.pokedexNumber + 1}`}>
+                                <Button colorScheme='teal' variant='outline'>
+                                    <ArrowForwardIcon/>
+                                </Button>
+                            </Link>
+                        </Flex>)
+                        }
                     </Flex>
                 </Stack>
 
