@@ -45,7 +45,7 @@ export default function PokemonGridItem({pokemon, user, evolutionChain}: { pokem
     }
 
     return (
-        <GridItem id="card" onMouseEnter={() => setIsFlipped(true)} onMouseLeave={() => setIsFlipped(false)} border='1px' borderColor='gray.200'>
+        <GridItem id="card" onMouseEnter={() => setIsFlipped(true)} onMouseLeave={() => setIsFlipped(false)} border='1px' borderColor='gray.200' backgroundColor={"white"}>
             <ReactCardFlip isFlipped={isFlipped} flipDirection="horizontal"
                            containerStyle={{height: "100%", display: "flex", alignItems: "stretch"}}>
                 <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}>
