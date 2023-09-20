@@ -1,3 +1,12 @@
 body {
     background-color: #f8fafc;
 }
+
+.pokemon-grid-item .pokemon-grid-item--on,
+.pokemon-grid-item:hover .pokemon-grid-item--off {
+    display: none;
+}
+
+.pokemon-grid-item:hover .pokemon-grid-item--on {
+    display: flex;
+}

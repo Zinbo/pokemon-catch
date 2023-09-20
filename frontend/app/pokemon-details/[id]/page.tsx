@@ -20,80 +20,36 @@ import {
     StatNumber
 } from "@chakra-ui/react";
 import Image from "next/image";
-import Evolutions, {calculateChainCompletion} from "@/app/pokemon-details/[id]/Evolutions";
-import Breeding, {canBeBred} from "@/app/pokemon-details/[id]/Breeding";
+import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
+import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import React, {useEffect, useState} from "react";
 import User from "@/data/User";
 import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
-import Encounters, {canCatch} from "@/app/pokemon-details/[id]/Encounters";
 import Link from "next/link";
+import {canBeBred, calculateChainCompletion, canCatch} from "@/lib/PokemonService";
+import useSWR from "swr";
+import Pokemon from "@/data/Pokemon";
+import Game from "@/data/Game";
+import Encounters from "@/app/pokemon-details/[id]/Encounters";
+import EvolutionChain from "@/data/EvolutionChain";
 
 const MAX_POKEDEX_NUMBER = 1017;
 const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
 const ROMAN_NUMERALS = ["I", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX", "X"];
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function Page({params}: {
     params: {
         id: number
     }
 }) {
-    const [user, setUser] = useState<null | User>(null);
-    const [pokemon, setPokemon] = useState(null);
-    const [games, setGames] = useState([]);
-    const [evolutionChain, setEvolutionChain] = useState(null);
-    const [error, setError] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const userResponse = useSWR<User, any>(`/users/123`, fetcher);
+    const pokemonResponse = useSWR<Pokemon, any>(`/pokemon/${params.id}`, fetcher);
+    const evolutionChainResponse = useSWR<EvolutionChain, any>(`/evolution-chains/${pokemonResponse.data?.pokedexNumber}`, fetcher);
+    const gamesResponse = useSWR<Game[], any>(`/games`, fetcher);
 
-    const getUserDetails = async () => {
-        const res = await fetch(`/users/123`);
-        if (res.ok) {
-            setUser(await res.json());
-        } else {
-            setError(true);
-        }
-    }
-
-    const getPokemon = async () => {
-        const res = await fetch(`/pokemon/${params.id}`);
-        if (res.ok) {
-            const pokemon = await res.json();
-            setPokemon(pokemon);
-            return pokemon;
-        } else {
-            setError(true);
-        }
-    }
-
-    const getEvolutionChain = async (id: number) => {
-        const res = await fetch(`/evolution-chains/${id}`);
-        if (res.ok) {
-            setEvolutionChain(await res.json());
-        } else {
-            setError(true);
-        }
-    }
-
-    const getGames = async () => {
-        const res = await fetch('/games');
-        if (res.ok) {
-            setGames(await res.json());
-        } else {
-            setError(true);
-        }
-
-    }
-
-    useEffect(() => {
-        async function fetchData() {
-            const promise = getPokemon().then(p => getEvolutionChain(p.evolutionChainId));
-            await Promise.all([getUserDetails(), promise, getGames()]);
-            setLoading(false);
-        }
-
-        fetchData();
-    }, [])
-
-    const getFormattedPokedexNumber = () => {
+    const getFormattedPokedexNumber = (pokemon: Pokemon) => {
         const number = pokemon.pokedexNumber;
         const length = number.toString().length;
         let formattedNumber = "#";
@@ -102,8 +58,8 @@ export default function Page({params}: {
         return formattedNumber;
     }
 
-    const getGenerationRomanNumeral = () => {
-        const number = pokemon.pokedexNumber;
+    const getGenerationRomanNumeral = (pokemon: Pokemon) => {
+        const number = pokemon.pokedexNumber  || 0;
         let found = false;
         let generationIndex = 0;
         while (!found) {
@@ -113,12 +69,12 @@ export default function Page({params}: {
         return ROMAN_NUMERALS[generationIndex];
     }
 
-    const getChainCompletionPercentage = () => {
+    const getChainCompletionPercentage = (evolutionChain : EvolutionChain, user : User) => {
         const result = calculateChainCompletion(evolutionChain, user);
         return `${((result.noCaught / result.noInChain) * 100).toFixed(2)}%`;
     }
 
-    const Badges = () => {
+    const Badges = ({pokemon, evolutionChain, user} : {pokemon: Pokemon, evolutionChain: EvolutionChain, user : User}) => {
         const badges: React.JSX.Element[] = [];
         if (user?.ownedPokemon.includes(pokemon.pokedexNumber)) badges.push(<Badge colorScheme='green'>Caught</Badge>)
         else badges.push(<Badge colorScheme='gray'>Not caught</Badge>)
@@ -137,8 +93,14 @@ export default function Page({params}: {
     }
 
     const Page = () => {
-        if (loading) return <></>;
-        else return (
+        if (pokemonResponse.isLoading || userResponse.isLoading || evolutionChainResponse.isLoading || gamesResponse.isLoading) return <>Loading!</>;
+        else if(!pokemonResponse.data || !userResponse.data || !evolutionChainResponse.data || !gamesResponse.data) return <>Error!</>;
+        const pokemon = pokemonResponse.data;
+        const evolutionChain = evolutionChainResponse.data;
+        const user = userResponse.data;
+        const games = gamesResponse.data;
+
+        return (
             <Flex direction={"column"} style={{paddingTop: "20px", paddingBottom: "20px"}}>
                 <Breadcrumb>
                     <BreadcrumbItem>
@@ -158,16 +120,16 @@ export default function Page({params}: {
                                         <Stack spacing='4'>
                                             <Box>
                                                 <Heading size='xl'>{pokemon.name}</Heading>
-                                                <Heading size='sm'>{getFormattedPokedexNumber()}</Heading>
-                                                <Heading size='xs'>Generation {getGenerationRomanNumeral()}</Heading>
+                                                <Heading size='sm'>{getFormattedPokedexNumber(pokemon)}</Heading>
+                                                <Heading size='xs'>Generation {getGenerationRomanNumeral(pokemon)}</Heading>
 
-                                                <Badges/>
+                                                <Badges pokemon={pokemon} evolutionChain={evolutionChain} user={user}/>
                                             </Box>
                                             <Divider/>
                                             <Box>
                                                 <Stat>
                                                     <StatLabel>Evolution Chain Completion</StatLabel>
-                                                    <StatNumber>{getChainCompletionPercentage()}</StatNumber>
+                                                    <StatNumber>{getChainCompletionPercentage(evolutionChain, user)}</StatNumber>
                                                 </Stat>
                                                 <Stat>
                                                     <StatLabel>Added to collection</StatLabel>
@@ -200,7 +162,7 @@ export default function Page({params}: {
                     </Card>
 
                     <Box>
-                        <Encounters pokemon={pokemon} games={games} user={user}/>
+                        <Encounters pokemon={pokemonResponse.data} games={games} user={user}/>
                     </Box>
 
                     <Box>
@@ -221,12 +183,12 @@ export default function Page({params}: {
                         }
                         {pokemon.pokedexNumber < MAX_POKEDEX_NUMBER &&
                             (<Flex justifyContent={"end"} flex={1}>
-                            <Link href={`/pokemon-details/${pokemon.pokedexNumber + 1}`}>
-                                <Button colorScheme='teal' variant='outline'>
-                                    <ArrowForwardIcon/>
-                                </Button>
-                            </Link>
-                        </Flex>)
+                                <Link href={`/pokemon-details/${pokemon.pokedexNumber + 1}`}>
+                                    <Button colorScheme='teal' variant='outline'>
+                                        <ArrowForwardIcon/>
+                                    </Button>
+                                </Link>
+                            </Flex>)
                         }
                     </Flex>
                 </Stack>
