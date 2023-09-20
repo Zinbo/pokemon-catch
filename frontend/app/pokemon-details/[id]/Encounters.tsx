@@ -5,6 +5,7 @@ import Pokemon, {Encounter} from "@/data/Pokemon";
 import Game from "@/data/Game";
 import CustomTable from "@/components/CustomTable";
 import User from "@/data/User";
+import {encounterIsAvailable} from "@/lib/PokemonService";
 
 type EncounterRow = {
     method: string;
@@ -13,14 +14,6 @@ type EncounterRow = {
     conditions: string;
     chance: number;
 };
-
-export function canCatch(pokemon: Pokemon, ownedGames: Game[]) {
-    return (!!pokemon.encounterDetails.encounters.find(e => canGetEncounter(e, ownedGames)));
-}
-
-function canGetEncounter(encounter : Encounter, ownedGames: Game[]) {
-    return (!!ownedGames.find(g => g.id === encounter.location.gameId));
-}
 
 export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, games : Game[], user: User}) {
     const columnHelper = createColumnHelper<EncounterRow>();
@@ -58,7 +51,7 @@ export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, g
 
     const calculateEncounters = () => {
         const rows = pokemon.encounterDetails.encounters.flatMap(encounter => {
-            if(!canGetEncounter(encounter, user.ownedGames)) return [];
+            if(!encounterIsAvailable(encounter, user.ownedGames)) return [];
             return {
                 method: encounter.method,
                 location: encounter.location.name,

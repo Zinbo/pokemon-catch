@@ -16,7 +16,7 @@ import Image from "next/image";
 import Xarrow, {xarrowPropsType} from "react-xarrows";
 import Pokemon from "@/data/Pokemon";
 import EvolutionChain from "@/data/EvolutionChain";
-import EvolutionChainV2, {EvolvesTo} from "@/data/EvolutionChainV2";
+import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import User from "@/data/User";
@@ -48,7 +48,7 @@ const data: EncounterRow[] = [
 
 const columnHelper = createColumnHelper<EncounterRow>();
 
-export default function Index({isOpen, onClose, pokemon, evolutionChain, user}: { isOpen: boolean, onClose: () => void, pokemon: Pokemon, evolutionChain: EvolutionChainV2, user: User }) {
+export default function Index({isOpen, onClose, pokemon, evolutionChain, user}: { isOpen: boolean, onClose: () => void, pokemon: Pokemon, evolutionChain: EvolutionChain, user: User }) {
     const columns = [
         columnHelper.accessor("method", {
             cell: (info) => info.getValue(),

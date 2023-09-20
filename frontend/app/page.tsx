@@ -1,71 +1,66 @@
 'use client'
-import {Flex, Grid, GridItem, Text} from "@chakra-ui/react";
-import Legend from "@/app/Legend";
-import AddGame from "@/app/AddGame";
+import {Box, Flex, Heading, Text} from "@chakra-ui/react";
 import Search from "@/app/Search";
-import Image from "next/image";
-import {StarIcon} from "@chakra-ui/icons";
 import PokemonGrid from "@/app/PokemonGrid";
-import {useEffect, useState} from "react";
+import React, {useState} from "react";
 import User from "@/data/User";
+import useSWR from "swr";
+import Pokemon from "@/data/Pokemon";
+import EvolutionChain from "@/data/EvolutionChain";
+import Game from "@/data/Game";
+import Filters from "@/app/Filters";
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
+const MAX_POKEDEX_NUMBER = 1017;
+const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
+const ROMAN_NUMERALS = ["I", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX", "X"];
 
 export default function Home() {
-    const [user, setUser] = useState<null | User>(null);
-    const [error, setError] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [pokemon, setPokemon] = useState([]);
-    const [games, setGames] = useState([]);
-    const [evolutionChains, setEvolutionChains] = useState([]);
+    const userResponse = useSWR<User, any>(`/users/123`, fetcher);
+    const pokemonResponse = useSWR<Pokemon[], any>(`/pokemon`, fetcher);
+    const evolutionChainsResponse = useSWR<EvolutionChain[], any>(`/evolution-chains`, fetcher);
+    const gamesResponse = useSWR<Game[], any>(`/games`, fetcher);
+    const [filters, setFilters] = useState<Filters>({hideOwned: false, hideUncatchable: false, onlyShowBreedable: false});
 
-    const getUserDetails = async () => {
-        const res = await fetch(`/users/123`);
-        if (res.ok) {
-            setUser(await res.json());
-        } else {
-            setError(true);
-        }
+
+
+    const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
+        arr.reduce((groups, item) => {
+            (groups[key(item)] ||= []).push(item);
+            return groups;
+        }, {} as Record<K, T[]>);
+
+    const Render = () => {
+        if (pokemonResponse.isLoading || userResponse.isLoading || evolutionChainsResponse.isLoading || gamesResponse.isLoading) return <>Loading!</>;
+        else if(!pokemonResponse.data || !userResponse.data || !evolutionChainsResponse.data || !gamesResponse.data) return <>Error!</>;
+        const pokemon = pokemonResponse.data;
+        const evolutionChains = evolutionChainsResponse.data;
+        const user = userResponse.data;
+        const games = gamesResponse.data;
+
+        let generation = 0;
+        const groupByGeneration = pokemon.reduce((group: any, p: Pokemon) => {
+            if(p.pokedexNumber > GENERATION_ENDS[generation]) generation++;
+            group[generation] = group[generation] ?? [];
+            group[generation].push(p);
+            return group;
+        }, {});
+
+
+        return (
+            <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>
+                <Search filters={filters} setFilters={setFilters}/>
+                {
+                    Object.keys(groupByGeneration).map(key => (
+                        <Box>
+                            <Heading>Generation {ROMAN_NUMERALS[key]}</Heading>
+                            <PokemonGrid pokemon={groupByGeneration[key]} games={games} user={user} evolutionChains={evolutionChains} filters={filters}/>
+                        </Box>
+                    ))
+                }
+            </Flex>
+        )
     }
 
-    const getPokemon = async() => {
-        const res = await fetch('/pokemon');
-        if (res.ok) {
-            setPokemon(await res.json());
-        } else {
-            setError(true);
-        }
-    }
-
-    const getEvolutionChains = async() => {
-        const res = await fetch('/evolution-chains');
-        if (res.ok) {
-            setEvolutionChains(await res.json());
-        } else {
-            setError(true);
-        }
-    }
-
-    const getGames = async() => {
-        const res = await fetch('/games');
-        if (res.ok) {
-            setGames(await res.json());
-        } else {
-            setError(true);
-        }
-
-    }
-
-    useEffect(() => {
-        async function fetchData() {
-            await Promise.all([getUserDetails(), getPokemon(), getGames(), getEvolutionChains()]);
-            setLoading(false);
-        }
-        fetchData();
-    }, [])
-
-    return (
-        <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>
-            <Search/>
-            <PokemonGrid pokemon={pokemon} games={games} user={user} evolutionChains={evolutionChains}/>
-        </Flex>
-    )
+    return <Render/>
 }

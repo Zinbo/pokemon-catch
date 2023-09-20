@@ -1,34 +1,16 @@
-import EvolutionChainV2, {EvolvesTo} from "@/data/EvolutionChainV2";
+import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Pokemon from "@/data/Pokemon";
 import User from "@/data/User";
 import Image from "next/image";
 import React, {useEffect, useState} from "react";
 import {Box, Card, CardBody, CardHeader, Flex, Heading, Text} from "@chakra-ui/react";
 import Xarrow from "react-xarrows";
-
-export function canBeBred(evolutionChain: EvolutionChainV2, user: User) {
-    return (!!findOwnedPokemon(evolutionChain.chain, user.ownedPokemon));
-}
-
-const findOwnedPokemon = (next: EvolvesTo, ownedPokemon: number[]) => {
-    if (ownedPokemon.includes(next.pokedexNumber)) return next;
-
-    if (!next?.evolvesTo?.length) return null;
-    let found = null;
-    next.evolvesTo.forEach(e => {
-        const potential = findOwnedPokemon(e, ownedPokemon);
-        if (potential) {
-            found = potential;
-            return;
-        }
-    })
-    return found;
-}
+import {findOwnedPokemonInChain} from "@/lib/PokemonService";
 
 export default function Breeding({user, pokemon, evolutionChain}: {
     user: User,
     pokemon: Pokemon,
-    evolutionChain: EvolutionChainV2
+    evolutionChain: EvolutionChain
 }) {
     const [arrows, setArrows] = useState<React.JSX.Element[]>([]);
     const [breedingChain, setBreedingChain] = useState<React.JSX.Element[]>([]);
@@ -40,7 +22,7 @@ export default function Breeding({user, pokemon, evolutionChain}: {
     }, [evolutionChain]);
 
     const calculateBreedingChain = () => {
-        const ownedPokemon = findOwnedPokemon(evolutionChain.chain, user.ownedPokemon);
+        const ownedPokemon = findOwnedPokemonInChain(evolutionChain.chain, user);
         if (!ownedPokemon) return {breedingChain: [], arrows: []};
 
         const breedingChain: React.JSX.Element[] = [];

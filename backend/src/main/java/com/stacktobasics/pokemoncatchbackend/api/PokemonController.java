@@ -54,6 +54,7 @@ public class PokemonController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Pokemon> getPokemonById(@PathVariable int id) {
+        log.info("Getting pokemon {}...", id);
         return pokemonRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

@@ -1,19 +1,19 @@
 export default interface EvolutionChain {
-    id: number
-    baby: Baby
-    evolutions: Evolution[]
-    allPokemonInChain: number[]
+    id: number;
+    baby ?: Baby;
+    chain: EvolvesTo;
+}
+
+export interface EvolvesTo {
+    waysToEvolve: EvolutionCriteria[];
+    pokedexNumber: number;
+    name: string;
+    evolvesTo: EvolvesTo[];
 }
 
 export interface Baby {
     pokedexNumber: number
     item: string
-}
-
-interface Evolution {
-    from: number
-    to: number
-    waysToEvolve: EvolutionCriteria[]
 }
 
 export interface EvolutionCriteria {
@@ -25,4 +25,3 @@ interface TriggerCriteria {
     type: string
     value: string
 }
-

@@ -1,6 +1,6 @@
-import {Flex, GridItem, IconButton, Text, Tooltip, useDisclosure} from "@chakra-ui/react";
+import {Flex, GridItem, IconButton, Text, useDisclosure} from "@chakra-ui/react";
 import Image from "next/image";
-import {CheckIcon, StarIcon, ViewIcon} from "@chakra-ui/icons";
+import {CheckIcon, ViewIcon} from "@chakra-ui/icons";
 import {useState} from "react";
 import ReactCardFlip from "react-card-flip";
 import Index from "@/components/DetailModal";
@@ -8,11 +8,11 @@ import Pokemon from "@/data/Pokemon";
 import User from "@/data/User";
 import EvolutionChain from "@/data/EvolutionChain";
 import {useRouter} from "next/navigation";
+import localFont from "next/font/local";
+import {canBeAcquired, notOwnedAndCanBeBred, userOwnsPokemon} from "@/lib/PokemonService";
 
 const NOT_CAUGHT = {WebkitFilter: "grayscale(100%)", filter: "grayscale(100%)"};
 const CANNOT_CATCH = {opacity: "0.5"};
-
-import localFont from "next/font/local";
 
 const pokemonFont = localFont({
     src: [
@@ -30,42 +30,34 @@ export default function PokemonGridItem({pokemon, user, evolutionChain}: { pokem
     const {isOpen, onOpen, onClose} = useDisclosure();
     const router = useRouter();
 
-    function openModal() {
-        setIsFlipped(false);
-        onOpen()
+    const getStyle = (pokemon: Pokemon) => {
+        if(userOwnsPokemon(pokemon.pokedexNumber, user)) return {};
+        if(canBeAcquired(pokemon, evolutionChain, user)) return NOT_CAUGHT;
+        return {...NOT_CAUGHT, ...CANNOT_CATCH}
     }
 
-    const getStyle = (pokemon: Pokemon) => {
-        if(user.ownedPokemon.includes(pokemon.pokedexNumber)) return {};
-        else return NOT_CAUGHT;
-        /*if (modResult === 0) return {};
-        if (modResult === 1) return NOT_CAUGHT;
-        if (modResult === 2) return CANNOT_CATCH;
-        return {...NOT_CAUGHT, ...CANNOT_CATCH};*/
+    const Egg = () => {
+        if(notOwnedAndCanBeBred(pokemon, evolutionChain, user)) return (
+            <Image src="/egg.svg" alt={"egg"} width={32} height={32}
+                   style={{
+                       position: "absolute",
+                       top: 0,
+                       right: 0
+                   }}/>
+        );
+        return <></>;
+
     }
 
     return (
-        <GridItem id="card" onMouseEnter={() => setIsFlipped(true)} onMouseLeave={() => setIsFlipped(false)} border='1px' borderColor='gray.200' backgroundColor={"white"}>
+        <GridItem id="card" onMouseEnter={() => setIsFlipped(true)} onMouseLeave={() => setIsFlipped(false)} border='1px' borderColor='gray.200' backgroundColor={"white"} >
             <ReactCardFlip isFlipped={isFlipped} flipDirection="horizontal"
                            containerStyle={{height: "100%", display: "flex", alignItems: "stretch"}}>
                 <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}>
                     <div style={{position: "relative"}}>
                         <Image src={`/images/list/${pokemon.pokedexNumber}.png`} width="96" height="96" alt={`i+1`}
                                style={{...getStyle(pokemon), display: "block"}}/>
-                        {/*{i % 4 === 0 ?
-                            <Tooltip label='Can be bred'><Image src="/egg.svg" alt={"egg"} width={32} height={32}
-                                                                style={{
-                                                                    position: "absolute",
-                                                                    top: 0,
-                                                                    right: 0
-                                                                }}/></Tooltip> : <></>}
-                        {i % 6 === 0 ?
-                            <Tooltip label='Best catch rate in this game'><StarIcon boxSize={8} color={"#FFCD00"}
-                                                                                    style={{
-                                                                                        position: "absolute",
-                                                                                        top: 0,
-                                                                                        left: 0
-                                                                                    }}/></Tooltip> : <></>}*/}
+                        <Egg/>
                     </div>
                     <Text className={pokemonFont.className} fontSize='xs'>{pokemon.name}</Text>
                 </Flex>

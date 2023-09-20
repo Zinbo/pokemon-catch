@@ -1,31 +1,12 @@
 import {Box, Card, CardBody, CardHeader, Flex, Heading} from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
-import EvolutionChainV2, {EvolvesTo} from "@/data/EvolutionChainV2";
+import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Image from "next/image";
 import Xarrow from "react-xarrows";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import User from "@/data/User";
 
-export function calculateChainCompletion(evolutionChain : EvolutionChainV2, user : User) {
-    return calculateCompletion(evolutionChain.chain, user);
-
-}
-
-function calculateCompletion(next : EvolvesTo, user : User) {
-    let calculation = {noInChain: 1, noCaught: user.ownedPokemon.includes(next.pokedexNumber) ? 1 : 0};
-    if(!next?.evolvesTo?.length) {
-        return calculation;
-    }
-    next.evolvesTo.forEach(e => {
-        const childResults = calculateCompletion(e, user);
-        calculation.noCaught += childResults.noCaught;
-        calculation.noInChain += childResults.noInChain;
-    })
-
-    return calculation;
-}
-
-export default function Evolutions({evolutionChain} : {evolutionChain: EvolutionChainV2}) {
+export default function Evolutions({evolutionChain} : {evolutionChain: EvolutionChain}) {
     const [evoArrows, setEvoArrows] = useState<React.JSX.Element[]>([]);
     const [evoRow, setEvoRow] = useState<React.JSX.Element[][]>([]);
 
