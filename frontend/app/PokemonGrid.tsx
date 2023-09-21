@@ -27,7 +27,6 @@ interface PokemonWithMeta extends Pokemon {
 export default function PokemonGrid({user, pokemon, evolutionChains, filters}: Props) {
 
     const calculatedPokemon : PokemonWithMeta[] = useMemo(() => {
-        console.log("Calculating pokemon meta!")
         return pokemon.map((p) => {
             const evolutionChain = (evolutionChains.find(e => e.id === p.evolutionChainId) as EvolutionChain);
             const owned = userOwnsPokemon(p.pokedexNumber, user);
@@ -41,23 +40,18 @@ export default function PokemonGrid({user, pokemon, evolutionChains, filters}: P
                 evolutionChain
             };
         });
-    }, [pokemon, user]);
+    }, [pokemon.length, user.id]);
 
-
-    const filteredPokemon = useMemo(() => {
-        return calculatedPokemon.filter((p) => {
-            if (filters.hideOwned && p.owned) return false;
-            if (filters.hideUncatchable && !p.catchable) return false;
-            return !(filters.onlyShowBreedable && !p.breedable);
-
-        });
-    }, [filters]);
+    const isVisible = (p: PokemonWithMeta) => {
+        if (filters.hideOwned && p.owned) return false;
+        if (filters.hideUncatchable && !p.catchable) return false;
+        return !(filters.onlyShowBreedable && !p.breedable);
+    }
 
     return (
         <Grid templateColumns='repeat(8, 1fr)'>
-            {filteredPokemon.map((p) => {
-                const evolutionChain = evolutionChains.find(e => e.id === p.evolutionChainId);
-                return <PokemonGridItem pokemon={p} user={user} evolutionChain={evolutionChain}/>;
+            {calculatedPokemon.map((p) => {
+                return <PokemonGridItem key={p.pokedexNumber} pokedexNumber={p.pokedexNumber} name={p.name} isOwned={p.owned} canBeAcquired={p.catchable} canBeBred={p.breedable} visible={isVisible(p)}/>;
             })}
         </Grid>
     )
