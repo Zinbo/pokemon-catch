@@ -36,14 +36,13 @@ async function getGames() : Promise<Game[]> {
 
 export default async function Home() {
     const evolutionChains = await getEvolutionChains();
-    const user = await getUser();
     const games = await getGames();
     const pokemon = await getPokemon();
 
     const Render = () => {
         return (
             <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>
-                <PokemonGrid pokemon={pokemon} games={games} user={user} evolutionChains={evolutionChains}/>
+                <PokemonGrid pokemon={pokemon} games={games} evolutionChains={evolutionChains}/>
             </Flex>
         )
     }

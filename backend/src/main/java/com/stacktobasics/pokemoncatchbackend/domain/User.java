@@ -41,8 +41,7 @@ public class User {
         pokemon.ifPresent(p -> ownedPokemon.add(pokedexNumber));
     }
 
-    public void removePokemon(@NonNull Integer pokedexNumber, @NonNull PokemonRepository pokemonRepository) {
-        Optional<Pokemon> pokemon = pokemonRepository.findById(pokedexNumber);
-        pokemon.ifPresent(p -> ownedPokemon.remove(p));
+    public void removePokemon(@NonNull Integer pokedexNumber) {
+        ownedPokemon.remove(pokedexNumber);
     }
 }

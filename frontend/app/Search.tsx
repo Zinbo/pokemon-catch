@@ -15,12 +15,12 @@ import {Property} from "csstype";
 import Filter = Property.Filter;
 import Filters from "@/app/Filters";
 
-export default function Search({filters, setFilters} : {filters: Filters, setFilters: (filter: Filters) => void }) {
+export default function Search({filters, setFilters, searchTerm, setSearchTerm} : {filters: Filters, setFilters: (filter: Filters) => void, searchTerm: string, setSearchTerm: (term: string) => void}) {
     return (
         <Flex flex={1} gap={'10px'}>
             <Box flex={1}>
                 <InputGroup backgroundColor={"white"}>
-                    <Input placeholder='Search for pokemon...'/>
+                    <Input placeholder='Search for pokemon...' value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
                     <InputRightElement>
                         <SearchIcon/>
                     </InputRightElement>

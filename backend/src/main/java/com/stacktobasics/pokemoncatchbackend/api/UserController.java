@@ -47,6 +47,7 @@ public class UserController {
 
     @PutMapping("/{userId}/pokemon/{pokedexNumber}")
     public ResponseEntity<User> savePokemon(@PathVariable String userId, @PathVariable Integer pokedexNumber) {
+        log.info("Saving pokemon with id: {}", pokedexNumber);
         // TODO: Set up users properly
         if(userRepository.findAll().isEmpty()) userRepository.save(new User());
 
@@ -58,10 +59,11 @@ public class UserController {
     @DeleteMapping("/{userId}/pokemon/{pokedexNumber}")
     public ResponseEntity<User> deletePokemon(@PathVariable String userId, @PathVariable Integer pokedexNumber) {
         // TODO: Set up users properly
+        log.info("Deleting pokemon with id: {}", pokedexNumber);
         if(userRepository.findAll().isEmpty()) userRepository.save(new User());
 
         User user = userRepository.findAll().get(0);
-        user.removePokemon(pokedexNumber, pokemonRepository);
+        user.removePokemon(pokedexNumber);
         return ResponseEntity.ok(userRepository.save(user));
     }
 
