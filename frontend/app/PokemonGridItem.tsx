@@ -1,6 +1,6 @@
 import {Flex, GridItem, IconButton, Text} from "@chakra-ui/react";
 import Image from "next/image";
-import {CheckIcon, CloseIcon, StarIcon, ViewIcon} from "@chakra-ui/icons";
+import {CheckIcon, CloseIcon, DeleteIcon, StarIcon, ViewIcon} from "@chakra-ui/icons";
 import {useRouter} from "next/navigation";
 import localFont from "next/font/local";
 import {memo, useMemo} from "react";
@@ -67,7 +67,7 @@ const PokemonGridItem = memo(function PokemonGridItem(
                     <IconButton isRound={true} variant='outline' size='lg' aria-label='Search database'
                                 icon={<ViewIcon/>} onClick={() => router.push(`/pokemon-details/${pokedexNumber}`)}/>
                     <IconButton isRound={true} variant='outline' size='lg' aria-label='Search database'
-                                icon={isOwned ? <CloseIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/> : <CheckIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/>}/>
+                                icon={isOwned ? <DeleteIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/> : <CheckIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/>}/>
 
                 </Flex>
             </>
