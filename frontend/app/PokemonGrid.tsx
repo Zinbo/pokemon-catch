@@ -104,27 +104,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
         groupByGeneration[generation].push(p);
     })
 
-    const Grids = () => {
-        return groupByGeneration.map((pokemonInGeneration, index) => {
-            return (
-                <Box key={index} style={{display: pokemonInGeneration.find(isVisible) ? "block" : "none"}}>
-                    <Heading>Generation {ROMAN_NUMERALS[index]}</Heading>
-                    <Grid templateColumns='repeat(8, 1fr)'>
-                        {pokemonInGeneration.map((p) => {
-                            return <PokemonGridItem key={p.pokedexNumber} pokedexNumber={p.pokedexNumber} name={p.name}
-                                                    isOwned={p.owned} canBeAcquired={p.catchable}
-                                                    canBeBred={p.breedable}
-                                                    hasBestCatchRate={hasBestEncounterInGame(p)}
-                                                    visible={isVisible(p)}
-                                                    toggleCatchStatus={toggleCatchStatus}/>;
-                        })}
-                    </Grid>
-                </Box>
-            )
-        })
-    }
-
-    const OwnAccordion = () => {
+    const Accordion = () => {
         return groupByGeneration.map((pokemonInGeneration, index) => {
             return (
                 <PokemonAccordionItem key={index} isVisible={!!pokemonInGeneration.find(isVisible)} heading={`Generation ${ROMAN_NUMERALS[index]}`}>
@@ -148,9 +128,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
                 <Search filters={filters} setFilters={setFilters} searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         selectedGame={selectedGame} setSelectedGame={setSelectedGame} games={games}/>
             </Box>
-            {/*{Grids()}*/}
-            {/*{Accordions()}*/}
-            {OwnAccordion()}
+            {Accordion()}
         </>
     )
 }
