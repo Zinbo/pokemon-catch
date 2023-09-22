@@ -1,6 +1,6 @@
 import {Flex, GridItem, IconButton, Text} from "@chakra-ui/react";
 import Image from "next/image";
-import {CheckIcon, CloseIcon, ViewIcon} from "@chakra-ui/icons";
+import {CheckIcon, CloseIcon, StarIcon, ViewIcon} from "@chakra-ui/icons";
 import {useRouter} from "next/navigation";
 import localFont from "next/font/local";
 import {memo, useMemo} from "react";
@@ -18,7 +18,9 @@ const pokemonFont = localFont({
     variable: '--font-pokemon'
 })
 
-const PokemonGridItem = memo(function PokemonGridItem({pokedexNumber, name, isOwned, canBeAcquired, canBeBred, visible, toggleCatchStatus}: {pokedexNumber: number, name: string, isOwned: boolean, canBeAcquired: boolean, canBeBred: boolean, visible: boolean, toggleCatchStatus: (pokedexNumber: number, isOwned: boolean) => void}) {
+const PokemonGridItem = memo(function PokemonGridItem(
+    {pokedexNumber, name, isOwned, canBeAcquired, canBeBred, visible, toggleCatchStatus, hasBestCatchRate}:
+        {pokedexNumber: number, name: string, isOwned: boolean, canBeAcquired: boolean, canBeBred: boolean, visible: boolean, toggleCatchStatus: (pokedexNumber: number, isOwned: boolean) => void, hasBestCatchRate: boolean}) {
     const router = useRouter();
 
     const getStyle = () => {
@@ -39,6 +41,15 @@ const PokemonGridItem = memo(function PokemonGridItem({pokedexNumber, name, isOw
         return <></>;
     }
 
+    const Star = () => {
+        if(!hasBestCatchRate) return <></>;
+        return <StarIcon style={{
+            position: "absolute",
+            top: 0,
+            left: 0
+        }}/>
+    }
+
     const Card = useMemo(() => {
         return (
             <>
@@ -47,6 +58,7 @@ const PokemonGridItem = memo(function PokemonGridItem({pokedexNumber, name, isOw
                         <Image src={`/images/list/${pokedexNumber}.png`} width="96" height="96" alt={`i+1`}
                                style={{...getStyle(), display: "block"}}/>
                         <Egg/>
+                        <Star/>
                     </div>
                     <Text className={pokemonFont.className} fontSize='xs'>{name}</Text>
                 </Flex>
@@ -60,7 +72,7 @@ const PokemonGridItem = memo(function PokemonGridItem({pokedexNumber, name, isOw
                 </Flex>
             </>
         )
-    }, [isOwned, canBeAcquired, canBeBred])
+    }, [isOwned, canBeAcquired, canBeBred, hasBestCatchRate])
 
     return (
         <GridItem id="card" border='1px' borderColor='gray.200' backgroundColor={"white"} className='pokemon-grid-item' style={{display: visible ? "block" : "none"}}>

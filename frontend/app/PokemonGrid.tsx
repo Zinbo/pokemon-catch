@@ -1,5 +1,5 @@
 'use client'
-import {Box, Grid, Heading} from "@chakra-ui/react";
+import {Box, filter, Grid, Heading} from "@chakra-ui/react";
 import PokemonGridItem from "@/app/PokemonGridItem";
 import User from "@/data/User";
 import Pokemon from "@/data/Pokemon";
@@ -7,7 +7,7 @@ import Game from "@/data/Game";
 import EvolutionChain from "@/data/EvolutionChain";
 import {canBeAcquired, notOwnedAndCanBeBred, userOwnsPokemon} from "@/lib/PokemonService";
 import Filters from "@/app/Filters";
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useEffect, useState} from "react";
 import Search from "@/app/Search";
 
 interface Props {
@@ -60,16 +60,15 @@ const getUser = async () => {
 
 
 
-export default function PokemonGrid({pokemon, evolutionChains}: Props) {
-    const [filters, setFilters] = useState<Filters>({hideOwned: false, hideUncatchable: false, onlyShowBreedable: false});
+export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
+    const [filters, setFilters] = useState<Filters>({hideOwned: false, hideUncatchable: false, onlyShowBreedable: false, onlyShowBestEncounters: false});
     const [user, setUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedGame, setSelectedGame] = useState<Game|null>(null);
 
     const toggleCatchStatus = async (pokedexNumber: number, isOwned: boolean) => {
         const url = `users/123/pokemon/${pokedexNumber}`;
         await fetch(url, {method: isOwned ? "DELETE" : "PUT"});
-
-        console.log("Reloading user!");
         setUser(await getUser());
     }
 
@@ -86,8 +85,16 @@ export default function PokemonGrid({pokemon, evolutionChains}: Props) {
         if (filters.hideOwned && p.owned) return false;
         if (filters.hideUncatchable && !p.catchable) return false;
         if(filters.onlyShowBreedable && !p.breedable) return false;
+        if(filters.onlyShowBestEncounters && !hasBestEncounterInGame(p)) return false;
+        if(!!selectedGame && !p.encounterDetails.encounters.find(e => e.location.gameId === selectedGame.id)) return false;
         return !searchTerm || p.name.toLowerCase().startsWith(searchTerm.toLowerCase());
 
+    }
+
+    const hasBestEncounterInGame = (p: PokemonWithMeta) => {
+        if(!selectedGame) return false;
+        if(p.owned) return false;
+        return !!p.encounterDetails.encounters.find(e => e.location.gameId === selectedGame.id && p.encounterDetails.bestCatchRate === e.catchRate);
     }
 
     let generation = 0;
@@ -108,6 +115,7 @@ export default function PokemonGrid({pokemon, evolutionChains}: Props) {
                         {pokemonInGeneration.map((p) => {
                             return <PokemonGridItem key={p.pokedexNumber} pokedexNumber={p.pokedexNumber} name={p.name}
                                                     isOwned={p.owned} canBeAcquired={p.catchable} canBeBred={p.breedable}
+                                                    hasBestCatchRate={hasBestEncounterInGame(p)}
                                                     visible={isVisible(p)}
                                                     toggleCatchStatus={toggleCatchStatus}/>;
                         })}
@@ -120,7 +128,7 @@ export default function PokemonGrid({pokemon, evolutionChains}: Props) {
     return (
         <>
             <Box>
-                <Search filters={filters} setFilters={setFilters} searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>
+                <Search filters={filters} setFilters={setFilters} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedGame={selectedGame} setSelectedGame={setSelectedGame} games={games}/>
             </Box>
             {Grids()}
 
