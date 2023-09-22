@@ -1,5 +1,5 @@
 'use client'
-import {Box, Grid, Heading} from "@chakra-ui/react";
+import {Box, Grid} from "@chakra-ui/react";
 import PokemonGridItem from "@/app/PokemonGridItem";
 import User from "@/data/User";
 import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";

@@ -1,3 +1,5 @@
+'use client'
+
 import {Box, Card, CardBody, CardHeader, Flex, Heading} from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
@@ -5,6 +7,7 @@ import Image from "next/image";
 import Xarrow from "react-xarrows";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import User from "@/data/User";
+import Pokemon from "@/data/Pokemon";
 
 export default function Evolutions({evolutionChain} : {evolutionChain: EvolutionChain}) {
     const [evoArrows, setEvoArrows] = useState<React.JSX.Element[]>([]);
@@ -26,8 +29,11 @@ export default function Evolutions({evolutionChain} : {evolutionChain: Evolution
     }
 
     const calculateEvoColumn = (evo: EvolvesTo, column: React.JSX.Element[], evolutionRow: React.JSX.Element[][], arrows: React.JSX.Element[], prevName ?: string) => {
-        // column.push(evo.name);
-        column.push(<Image id={`${evo.name}Evo`} src={`/images/list/${evo.pokedexNumber}.png`} width="96" height="96" alt="pokemon"/>)
+
+        column.push(<Flex direction={"column"} alignItems={"center"}>
+            <Box><Image id={`${evo.name}Evo`} src={`/images/list/${evo.pokedexNumber}.png`} width="96" height="96" alt="pokemon"/></Box>
+            {evo.name}
+        </Flex>)
 
         if(prevName) {
             const criteria = evo.waysToEvolve.map(criteria => {
@@ -66,13 +72,7 @@ export default function Evolutions({evolutionChain} : {evolutionChain: Evolution
                 <Flex justifyContent={"space-between"} alignItems={"center"}>
                     {evoRow.map(column => (
                         <Flex direction={"column"} gap={"50px"} flex={1} alignItems={"center"}>
-                            {column.map(p => (
-                                <Flex direction={"column"} alignItems={"center"}>
-                                    <Box>{p}</Box>
-                                    Bulbasaur
-                                </Flex>
-
-                            ))}
+                            {column.map(p => p)}
                         </Flex>
                     ))}
                     <>{evoArrows}</>

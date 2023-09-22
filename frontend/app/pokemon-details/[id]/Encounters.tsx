@@ -1,3 +1,5 @@
+'use client'
+
 import {Box, Card, CardBody, CardHeader, Checkbox, Heading} from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
 import {createColumnHelper} from "@tanstack/table-core";
@@ -15,7 +17,7 @@ type EncounterRow = {
     chance: number;
 };
 
-export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, games : Game[], user: User}) {
+export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, games : Game[], user: User | undefined}) {
     const columnHelper = createColumnHelper<EncounterRow>();
     const columns = [
         columnHelper.accessor("method", {
@@ -43,15 +45,15 @@ export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, g
         })
     ];
 
-    const [encounters, setEncounters] = useState<EncounterRow[]>([]);
+    const [showAllEncounters, setShowAllEncounters] = useState(true);
 
     useEffect(() => {
-        calculateEncounters()
-    }, [pokemon]);
+        // When user logs in then set show all encounters to false, as that is the default, but we want to show them all at first for SEO reasons
+        if(!!user) setShowAllEncounters(false);
+    }, [user]);
 
-    const calculateEncounters = () => {
-        const rows = pokemon.encounterDetails.encounters.flatMap(encounter => {
-            if(!encounterIsAvailable(encounter, user.ownedGames)) return [];
+    const encounters = pokemon.encounterDetails.encounters.flatMap(encounter => {
+            if(user && !showAllEncounters && !encounterIsAvailable(encounter, user.ownedGames)) return [];
             return {
                 method: encounter.method,
                 location: encounter.location.name,
@@ -60,9 +62,8 @@ export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, g
                 chance: encounter.catchRate
             };
         });
-        rows.sort((a,b) => b.chance - a.chance);
-        setEncounters(rows);
-    }
+    encounters.sort((a,b) => b.chance - a.chance);
+
 
     return (
         <Card>
@@ -71,7 +72,7 @@ export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, g
             </CardHeader>
 
             <CardBody>
-                <Checkbox>Show all encounters</Checkbox>
+                <Checkbox isChecked={showAllEncounters} onChange={e => setShowAllEncounters(e.target.checked)}>Show all encounters</Checkbox>
                 <Box style={{border: "1px solid #E2E8F0", borderRadius: "12px"}}>
                     <CustomTable columns={columns} data={encounters}/>
                 </Box>
