@@ -1,62 +1,49 @@
-'use client'
-import {Box, Flex, Heading, Text} from "@chakra-ui/react";
-import Search from "@/app/Search";
+import {Flex} from "@chakra-ui/react";
 import PokemonGrid from "@/app/PokemonGrid";
-import React, {useMemo, useState} from "react";
+import React from "react";
 import User from "@/data/User";
-import useSWR from "swr";
 import Pokemon from "@/data/Pokemon";
 import EvolutionChain from "@/data/EvolutionChain";
 import Game from "@/data/Game";
-import Filters from "@/app/Filters";
-import pokemonGridItem from "@/app/PokemonGridItem";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
-const MAX_POKEDEX_NUMBER = 1017;
-const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
-const ROMAN_NUMERALS = ["I", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX", "X"];
+async function getData(path: string) {
+    const res = await fetch(`http://localhost:8080/${path}`)
+    if (!res.ok) {
+        // This will activate the closest `error.js` Error Boundary
+        throw new Error('Failed to fetch data')
+    }
 
-export default function Home() {
-    const userResponse = useSWR<User, any>(`/users/123`, fetcher);
-    const pokemonResponse = useSWR<Pokemon[], any>(`/pokemon`, fetcher);
-    const evolutionChainsResponse = useSWR<EvolutionChain[], any>(`/evolution-chains`, fetcher);
-    const gamesResponse = useSWR<Game[], any>(`/games`, fetcher);
-    const [filters, setFilters] = useState<Filters>({hideOwned: false, hideUncatchable: false, onlyShowBreedable: false});
+    return res.json();
+}
 
-/*    const groupByGeneration = useMemo(() => {
-        console.log("Calculating generations")
-        if(!pokemonResponse.data) return {};
-        let generation = 0;
-        // @ts-ignore
-        return  pokemonResponse.data.reduce((group: any, p: Pokemon) => {
-            if(p.pokedexNumber > GENERATION_ENDS[generation]) generation++;
-            group[generation] = group[generation] ?? [];
-            group[generation].push(p);
-            return group;
-        }, {});
-    }, [pokemonResponse.isLoading]);*/
+async function getPokemon() : Promise<Pokemon[]> {
+    return getData('pokemon');
+}
+
+async function getUser() : Promise<User> {
+    return getData('users/123');
+}
+
+async function getEvolutionChains() : Promise<EvolutionChain[]> {
+    return getData('evolution-chains');
+}
+
+async function getGames() : Promise<Game[]> {
+    return getData('games');
+}
+
+
+
+export default async function Home() {
+    const evolutionChains = await getEvolutionChains();
+    const user = await getUser();
+    const games = await getGames();
+    const pokemon = await getPokemon();
 
     const Render = () => {
-        if (pokemonResponse.isLoading || userResponse.isLoading || evolutionChainsResponse.isLoading || gamesResponse.isLoading) return <>Loading!</>;
-        else if(!pokemonResponse.data || !userResponse.data || !evolutionChainsResponse.data || !gamesResponse.data) return <>Error!</>;
-        const evolutionChains = evolutionChainsResponse.data;
-        const user = userResponse.data;
-        const games = gamesResponse.data;
-        const pokemon = pokemonResponse.data;
-
         return (
             <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>
-                <Search filters={filters} setFilters={setFilters}/>
-                <PokemonGrid pokemon={pokemon} games={games} user={user} evolutionChains={evolutionChains} filters={filters}/>
-                {/*{
-                    Object.keys(groupByGeneration).map(key => (
-                        <Box>
-                            <Heading>Generation {ROMAN_NUMERALS[key]}</Heading>
-                            <PokemonGrid pokemon={groupByGeneration[key]} games={games} user={user} evolutionChains={evolutionChains} filters={filters}/>
-                            <PokemonGrid pokemon={groupByGeneration[key]} games={games} user={user} evolutionChains={evolutionChains} filters={filters}/>
-                        </Box>
-                    ))
-                }*/}
+                <PokemonGrid pokemon={pokemon} games={games} user={user} evolutionChains={evolutionChains}/>
             </Flex>
         )
     }

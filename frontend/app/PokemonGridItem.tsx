@@ -20,7 +20,6 @@ const pokemonFont = localFont({
 
 const PokemonGridItem = memo(function PokemonGridItem({pokedexNumber, name, isOwned, canBeAcquired, canBeBred, visible}: {pokedexNumber: number, name: string, isOwned: boolean, canBeAcquired: boolean, canBeBred: boolean, visible: boolean}) {
     const router = useRouter();
-    console.log(`Drawing grid item for pokemon`);
 
     const getStyle = () => {
         if(isOwned) return {};
@@ -42,7 +41,6 @@ const PokemonGridItem = memo(function PokemonGridItem({pokedexNumber, name, isOw
     }
 
     const Card = useMemo(() => {
-        console.log("Re-drawing inner pokemon card");
         return (
             <>
                 <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"} className='pokemon-grid-item--off'>
