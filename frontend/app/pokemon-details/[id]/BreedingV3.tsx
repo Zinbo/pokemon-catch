@@ -9,7 +9,7 @@ import {Box, Card, CardBody, CardHeader, Flex, Heading, Text} from "@chakra-ui/r
 import Xarrow from "react-xarrows";
 import {findOwnedPokemonInChain} from "@/lib/PokemonService";
 
-export default function BreedingV3({user, pokemon, evolutionChain}: {
+export default function Breeding({user, pokemon, evolutionChain}: {
     user: User | undefined,
     pokemon: Pokemon,
     evolutionChain: EvolutionChain

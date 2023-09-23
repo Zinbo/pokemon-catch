@@ -1,32 +1,12 @@
 'use client'
 
 import {Box, Card, CardBody, CardHeader, Flex, Heading} from "@chakra-ui/react";
-import React, {useEffect, useState} from "react";
+import React from "react";
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Image from "next/image";
 import Xarrow from "react-xarrows";
-import Breeding from "@/app/pokemon-details/[id]/Breeding";
-import User from "@/data/User";
-import Pokemon from "@/data/Pokemon";
 
 export default function Evolutions({evolutionChain} : {evolutionChain: EvolutionChain}) {
-    const [evoArrows, setEvoArrows] = useState<React.JSX.Element[]>([]);
-    const [evoRow, setEvoRow] = useState<React.JSX.Element[][]>([]);
-
-    useEffect(() => {
-        const {row, arrows} = calculateEvolutionChain();
-        setEvoArrows(arrows);
-        setEvoRow(row);
-    }, [evolutionChain]);
-
-    const calculateEvolutionChain = () => {
-        const row: React.JSX.Element[][] = [];
-        const column: React.JSX.Element[] = [];
-        const arrows: React.JSX.Element[] = [];
-        row.push(column);
-        calculateEvoColumn(evolutionChain.chain, column, row, arrows);
-        return {row, arrows};
-    }
 
     const calculateEvoColumn = (evo: EvolvesTo, column: React.JSX.Element[], evolutionRow: React.JSX.Element[][], arrows: React.JSX.Element[], prevName ?: string) => {
 
@@ -61,6 +41,17 @@ export default function Evolutions({evolutionChain} : {evolutionChain: Evolution
         evolutionRow.push(newColumn);
         evo.evolvesTo.forEach(e => calculateEvoColumn(e, newColumn, evolutionRow, arrows, evo.name));
     }
+
+    const calculateEvolutionChain = () => {
+        const row: React.JSX.Element[][] = [];
+        const column: React.JSX.Element[] = [];
+        const arrows: React.JSX.Element[] = [];
+        row.push(column);
+        calculateEvoColumn(evolutionChain.chain, column, row, arrows);
+        return {row, arrows};
+    }
+
+    const {row: evoRow, arrows: evoArrows} = calculateEvolutionChain();
 
     return (
         <Card>
