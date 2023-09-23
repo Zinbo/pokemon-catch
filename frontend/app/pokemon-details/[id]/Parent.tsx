@@ -30,6 +30,8 @@ import Game from "@/data/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";
 import EvolutionChain from "@/data/EvolutionChain";
 import useSWR from "swr";
+import BreedingV2 from "@/app/pokemon-details/[id]/BreedingV2";
+import BreedingV3 from "@/app/pokemon-details/[id]/BreedingV3";
 
 const MAX_POKEDEX_NUMBER = 1017;
 const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
@@ -162,7 +164,7 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                         <Evolutions evolutionChain={evolutionChain}/>
                     </Box>
                     <Box>
-                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
+                        <BreedingV3 user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
                     </Box>
                     <Flex justifyContent={"space-between"}>
                         {pokemon.pokedexNumber > 1 &&

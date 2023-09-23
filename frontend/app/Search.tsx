@@ -50,7 +50,7 @@ export default function Search({filters, setFilters, searchTerm, setSearchTerm, 
                                 if(!game) setFilters({...filters, onlyShowBestEncounters: false});
                             }} placeholder='Select game'>
                                 {
-                                    games.map((g, index) => <option value={index}>{g.name}</option>)
+                                    games.map((g, index) => <option key={index} value={index}>{g.name}</option>)
                                 }
                             </Select>
                             </MenuItem>

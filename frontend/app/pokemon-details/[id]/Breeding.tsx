@@ -77,7 +77,7 @@ export default function Breeding({user, pokemon, evolutionChain}: {
         return (
             <Card>
                 <CardHeader>
-                    <Heading size='md'>Breeding</Heading>
+                    <Heading size='md'>Breeding V1</Heading>
                 </CardHeader>
 
                 <CardBody>
