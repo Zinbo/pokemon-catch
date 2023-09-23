@@ -1,6 +1,6 @@
 import {Flex, GridItem, IconButton, Text} from "@chakra-ui/react";
 import Image from "next/image";
-import {CheckIcon, CloseIcon, DeleteIcon, StarIcon, ViewIcon} from "@chakra-ui/icons";
+import {CheckIcon, DeleteIcon, StarIcon, ViewIcon} from "@chakra-ui/icons";
 import {useRouter} from "next/navigation";
 import localFont from "next/font/local";
 import {memo, useMemo} from "react";

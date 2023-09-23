@@ -18,8 +18,6 @@ import {
     StatNumber
 } from "@chakra-ui/react";
 import Image from "next/image";
-import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
-import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import React from "react";
 import User from "@/data/User";
 import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
@@ -30,8 +28,8 @@ import Game from "@/data/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";
 import EvolutionChain from "@/data/EvolutionChain";
 import useSWR from "swr";
-import BreedingV2 from "@/app/pokemon-details/[id]/BreedingV2";
-import BreedingV3 from "@/app/pokemon-details/[id]/BreedingV3";
+import Breeding from "@/app/pokemon-details/[id]/BreedingV3";
+import Evolutions from "@/app/pokemon-details/[id]/EvolutionsV2";
 
 const MAX_POKEDEX_NUMBER = 1017;
 const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
@@ -127,7 +125,7 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                                                     <StatNumber>{getChainCompletionPercentage(evolutionChain, user)}</StatNumber>
                                                 </Stat>
                                                 <Stat>
-                                                    <StatLabel>Added to collection</StatLabel>
+                                                    <StatLabel>Added to collection [PLACEHOLDER]</StatLabel>
                                                     <StatNumber>2023-08-01</StatNumber>
                                                 </Stat>
                                             </Box>
@@ -164,7 +162,7 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                         <Evolutions evolutionChain={evolutionChain}/>
                     </Box>
                     <Box>
-                        <BreedingV3 user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
+                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
                     </Box>
                     <Flex justifyContent={"space-between"}>
                         {pokemon.pokedexNumber > 1 &&
