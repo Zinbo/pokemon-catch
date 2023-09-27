@@ -1,10 +1,9 @@
 import {Flex} from "@chakra-ui/react";
 import PokemonGrid from "@/app/PokemonGrid";
 import React from "react";
-import User from "@/data/User";
 import Pokemon from "@/data/Pokemon";
 import EvolutionChain from "@/data/EvolutionChain";
-import Game from "@/data/Game";
+import games from "@/data/games.json"
 
 async function getData(path: string) {
     const res = await fetch(`http://localhost:8080/${path}`)
@@ -24,13 +23,8 @@ async function getEvolutionChains() : Promise<EvolutionChain[]> {
     return getData('evolution-chains');
 }
 
-async function getGames() : Promise<Game[]> {
-    return getData('games');
-}
-
 export default async function Home() {
     const evolutionChains = await getEvolutionChains();
-    const games = await getGames();
     const pokemon = await getPokemon();
 
     return(

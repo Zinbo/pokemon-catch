@@ -28,7 +28,6 @@ import {
 } from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
-import {ImportedGame} from "@/app/owned-games/page";
 import {InfoIcon} from "@chakra-ui/icons";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -50,7 +49,7 @@ const difficultTooltip = (
             2)</div><div>Select these games only if you're willing to put in the time and effort!</div></div>}><InfoIcon/></Tooltip>
 )
 
-export default function GamesSelect({allGames}: { allGames: ImportedGame[] }) {
+export default function GamesSelect({allGames}: { allGames: Game[] }) {
     const router = useRouter();
     const {data: user, error} = useSWR<User, any>(`/users/123`, fetcher);
     const [selectedGames, setSelectedGames] = useState(user?.ownedGames ?? []);

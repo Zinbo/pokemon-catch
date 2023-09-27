@@ -1,9 +1,8 @@
 import React from "react";
-import User from "@/data/User";
 import Pokemon from "@/data/Pokemon";
-import Game from "@/data/Game";
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Parent from "@/app/pokemon-details/[id]/Parent";
+import games from "@/data/games.json"
 
 async function getData(path: string) {
     const res = await fetch(`http://localhost:8080/${path}`)
@@ -42,11 +41,6 @@ async function getEvolutionChain(id: number) : Promise<EvolutionChain> {
     return getData(`evolution-chains/${id}`);
 }
 
-async function getGames() : Promise<Game[]> {
-    return getData('games');
-}
-
-
 export default async function Page({params}: {
     params: {
         id: number
@@ -55,7 +49,6 @@ export default async function Page({params}: {
     const pokemon = await getPokemon(params.id);
     const evolutionChain = await getEvolutionChain(pokemon.evolutionChainId);
     const allPokemonInChain = await getAllPokemonInChain(evolutionChain);
-    const games = await getGames();
 
     return <Parent games={games} pokemon={pokemon} evolutionChain={evolutionChain} allPokemonInChain={allPokemonInChain}/>
 }
