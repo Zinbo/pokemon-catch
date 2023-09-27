@@ -1,6 +1,15 @@
 import Game from "@/data/Game";
 import GamesSelect from "@/app/owned-games/GamesSelect";
 import {Flex, Heading, Text} from "@chakra-ui/react";
+import allGames from "@/data/games.json"
+
+export interface ImportedGame {
+    id: number;
+    name: string;
+    console: string;
+    expansion: boolean;
+    generation: number;
+};
 
 async function getData(path: string) {
     const res = await fetch(`http://localhost:8080/${path}`)
@@ -18,7 +27,7 @@ async function getGames() : Promise<Game[]> {
 }
 
 export default async function OwnedGamesPage() {
-    const allGames = await getGames();
+    // const allGames = await getGames();
 
     return (
         <Flex direction={"column"} style={{paddingTop: "20px", paddingBottom: "20px"}}>

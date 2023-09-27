@@ -5,20 +5,52 @@ import useSWR from "swr";
 import User from "@/data/User";
 import {
     Button,
+    Card,
+    CardBody,
+    CardHeader,
     Checkbox,
-    Modal, ModalBody,
-    ModalCloseButton, ModalContent, ModalFooter,
+    FormControl,
+    FormHelperText,
+    FormLabel,
+    Heading,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalFooter,
     ModalHeader,
     ModalOverlay,
-    Stack, Text,
+    SimpleGrid,
+    Stack,
+    Text,
+    Tooltip,
     useDisclosure
 } from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
+import {ImportedGame} from "@/app/owned-games/page";
+import {InfoIcon} from "@chakra-ui/icons";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-export default function GamesSelect({allGames}: { allGames: Game[] }) {
+const ROMAN_NUMERALS = ["I (Nintendo 3DS Virtual Console)", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX"];
+
+const difficultTooltipOlderGen = (
+    <Tooltip
+        label={<div><div>Getting pokemon from this generation to Pokemon Home is a difficult and very tedious
+            undertaking. You'll require a Nintendo DS or DS Lite, another Nintendo (3)DS, a Gen IV game (Diamond, Pearl, Platinum, Soul
+            Silver, and Heart Gold), and a Gen V Pokémon game (Black, White, Black 2, or White
+            2)</div><div>Select these games only if you're willing to put in the time and effort!</div></div>}><InfoIcon/></Tooltip>
+)
+
+const difficultTooltip = (
+    <Tooltip
+        label={<div><div>Getting pokemon from this generation to Pokemon Home is a difficult and very tedious
+            undertaking. You'll require 2 Nintendo (3)DSs and a Gen V Pokémon game (Black, White, Black 2, or White
+            2)</div><div>Select these games only if you're willing to put in the time and effort!</div></div>}><InfoIcon/></Tooltip>
+)
+
+export default function GamesSelect({allGames}: { allGames: ImportedGame[] }) {
     const router = useRouter();
     const {data: user, error} = useSWR<User, any>(`/users/123`, fetcher);
     const [selectedGames, setSelectedGames] = useState(user?.ownedGames ?? []);
@@ -26,7 +58,7 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
     const {isOpen, onOpen, onClose} = useDisclosure();
 
     useEffect(() => {
-        if(!user) return;
+        if (!user) return;
         onOpen();
         setLoading(false);
         setSelectedGames(user.ownedGames);
@@ -48,7 +80,7 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
     }
 
     const submit = async () => {
-        if(!selectedGames) return;
+        if (!selectedGames) return;
         setLoading(true);
         await fetch("/users/123/games", {
             method: 'POST',
@@ -69,18 +101,25 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
                 <ModalBody>
                     <Text>
                         <Text fontWeight={"bold"}>Important!</Text>
-                        Due to the Nintendo 3DS store shutting down, you can no longer download the Pokémon Bank and the Poké Transporter.<br/>
-                        This means that if you do not already own a 3DS with the Pokémon Bank and the Poké Transporter apps installed you cannot transfer pokemon from games that are not on the Nintendo Switch.
+                        Due to the Nintendo 3DS store shutting down, you can no longer download the Pokémon Bank and the
+                        Poké Transporter apps.<br/>
+                        This means that if you do not already own a 3DS with Pokémon Bank app (and the Poké Transporter app for Gen 1 - 5)
+                         installed you cannot transfer pokemon from games that are not on the Nintendo Switch.
                     </Text>
                     <br/>
-                    <Text>Please select below whether you have access to these apps (these settings can be changed later):</Text>
-                    <Checkbox>
+                    <FormControl as='fieldset'>
+                        <FormLabel as='legend'>
+                            Please select whether you have access to these apps
+                        </FormLabel>
+                                <Checkbox>
 
-                        Pokémon Bank
-                    </Checkbox>
-                    <Checkbox>
-                        Pokémon Bank and Poké Transporter
-                    </Checkbox>
+                                    Pokémon Bank
+                                </Checkbox>
+                                <Checkbox>
+                                    Pokémon Bank and Poké Transporter
+                                </Checkbox>
+                        <FormHelperText>Your answers will hide games that you cannot transfer pokemon from. You can change this at any time in your settings.</FormHelperText>
+                    </FormControl>
                 </ModalBody>
                 <ModalFooter>
                     <Button colorScheme='blue' mr={3} onClick={onClose}>
@@ -90,14 +129,27 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
                 </ModalFooter>
             </ModalContent>
         </Modal>
-        <Stack spacing={5}>
-            {allGames.map(game => (
-                <Checkbox
-                    isChecked={!!selectedGames?.find(selectedGames => selectedGames.id === game.id)}
-                    onChange={(e) => toggleGame(game, e)}>
-                    {game.name}
-                </Checkbox>))}
-        </Stack>
+        <SimpleGrid columns={3} spacing={10}>
+            {ROMAN_NUMERALS.map((value, index) => (
+                    <Card>
+                        <CardHeader>
+                            <Heading size='md'>Generation {value} {((index === 1 || index == 2) && difficultTooltipOlderGen) || (index === 3 && difficultTooltip)}</Heading>
+                        </CardHeader>
+                        <CardBody>
+                            <Stack spacing={2}>
+                                {allGames.filter(game => game.generation === (index + 1)).map(game => (
+                                    <Checkbox
+                                        isChecked={!!selectedGames?.find(selectedGames => selectedGames.id === game.id)}
+                                        onChange={(e) => toggleGame(game, e)}>
+                                        {game.name}
+                                    </Checkbox>))}
+                            </Stack>
+                        </CardBody>
+                    </Card>
+                )
+            )}
+        </SimpleGrid>
+
         <Button
             mt={4}
             colorScheme='teal'

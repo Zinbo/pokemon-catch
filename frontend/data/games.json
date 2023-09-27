@@ -1,0 +1,290 @@
+[
+  {
+    "id": 1,
+    "name": "Red",
+    "console": "3ds-virtual-console",
+    "expansion": false,
+    "generation": 1
+  },
+  {
+    "id": 2,
+    "name": "Blue",
+    "console": "3ds-virtual-console",
+    "expansion": false,
+    "generation": 1
+  },
+  {
+    "id": 3,
+    "name": "Yellow",
+    "console": "3ds-virtual-console",
+    "expansion": false,
+    "generation": 1
+  },
+  {
+    "id": 4,
+    "name": "Gold",
+    "console": "3ds-virtual-console",
+    "expansion": false,
+    "generation": 2
+  },
+  {
+    "id": 5,
+    "name": "Silver",
+    "console": "3ds-virtual-console",
+    "expansion": false,
+    "generation": 2
+  },
+  {
+    "id": 6,
+    "name": "Crystal",
+    "console": "3ds-virtual-console",
+    "expansion": false,
+    "generation": 2
+  },
+  {
+    "id": 7,
+    "name": "Ruby",
+    "console": "gba",
+    "expansion": false,
+    "generation": 3
+  },
+  {
+    "id": 8,
+    "name": "Sapphire",
+    "console": "gba",
+    "expansion": false,
+    "generation": 3
+  },
+  {
+    "id": 9,
+    "name": "Emerald",
+    "console": "gba",
+    "expansion": false,
+    "generation": 3
+  },
+  {
+    "id": 10,
+    "name": "FireRed",
+    "console": "gba",
+    "expansion": false,
+    "generation": 3
+  },
+  {
+    "id": 11,
+    "name": "LeafGreen",
+    "console": "gba",
+    "expansion": false,
+    "generation": 3
+  },
+  {
+    "id": 12,
+    "name": "Diamond",
+    "console": "ds",
+    "expansion": false,
+    "generation": 4
+  },
+  {
+    "id": 13,
+    "name": "Pearl",
+    "console": "ds",
+    "expansion": false,
+    "generation": 4
+  },
+  {
+    "id": 14,
+    "name": "Platinum",
+    "console": "ds",
+    "expansion": false,
+    "generation": 4
+  },
+  {
+    "id": 15,
+    "name": "HeartGold",
+    "console": "ds",
+    "expansion": false,
+    "generation": 4
+  },
+  {
+    "id": 16,
+    "name": "SoulSilver",
+    "console": "ds",
+    "expansion": false,
+    "generation": 4
+  },
+  {
+    "id": 17,
+    "name": "Black",
+    "console": "ds",
+    "expansion": false,
+    "generation": 5
+  },
+  {
+    "id": 18,
+    "name": "White",
+    "console": "ds",
+    "expansion": false,
+    "generation": 5
+  },
+  {
+    "id": 21,
+    "name": "Black 2",
+    "console": "ds",
+    "expansion": false,
+    "generation": 5
+  },
+  {
+    "id": 22,
+    "name": "White 2",
+    "console": "ds",
+    "expansion": false,
+    "generation": 5
+  },
+  {
+    "id": 23,
+    "name": "X",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 6
+  },
+  {
+    "id": 24,
+    "name": "Y",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 6
+
+  },
+  {
+    "id": 25,
+    "name": "Omega Ruby",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 6
+  },
+  {
+    "id": 26,
+    "name": "Alpha Sapphire",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 6
+  },
+  {
+    "id": 27,
+    "name": "Sun",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 7
+  },
+  {
+    "id": 28,
+    "name": "Moon",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 7
+  },
+  {
+    "id": 29,
+    "name": "Ultra Sun",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 7
+  },
+  {
+    "id": 30,
+    "name": "Ultra Moon",
+    "console": "3ds",
+    "expansion": false,
+    "generation": 7
+  },
+  {
+    "id": 31,
+    "name": "Let's Go, Pikachu!",
+    "console": "switch",
+    "expansion": false,
+    "generation": 7
+  },
+  {
+    "id": 32,
+    "name": "Let's Go, Eevee!",
+    "console": "switch",
+    "expansion": false,
+    "generation": 7
+  },
+  {
+    "id": 33,
+    "name": "Sword",
+    "console": "switch",
+    "expansion": false,
+    "generation": 8
+  },
+  {
+    "id": 34,
+    "name": "Shield",
+    "console": "switch",
+    "expansion": false,
+    "generation": 8
+  },
+  {
+    "id": 35,
+    "name": "The Isle of Armor",
+    "console": "switch",
+    "expansion": true,
+    "generation": 8
+  },
+  {
+    "id": 36,
+    "name": "The Crown Tundra",
+    "console": "switch",
+    "expansion": true,
+    "generation": 8
+  },
+  {
+    "id": 37,
+    "name": "Brilliant Diamond",
+    "console": "switch",
+    "expansion": false,
+    "generation": 8
+  },
+  {
+    "id": 38,
+    "name": "Shining Pearl",
+    "console": "switch",
+    "expansion": false,
+    "generation": 8
+  },
+  {
+    "id": 39,
+    "name": "Legends: Arceus",
+    "console": "switch",
+    "expansion": false,
+    "generation": 8
+  },
+  {
+    "id": 40,
+    "name": "Scarlet",
+    "console": "switch",
+    "expansion": false,
+    "generation": 9
+  },
+  {
+    "id": 41,
+    "name": "Violet",
+    "console": "switch",
+    "expansion": false,
+    "generation": 9
+  },
+  {
+    "id": 42,
+    "name": "The-teal-mask",
+    "console": "switch",
+    "expansion": true,
+    "generation": 9
+  },
+  {
+    "id": 43,
+    "name": "The-indigo-disk",
+    "console": "switch",
+    "expansion": true,
+    "generation": 9
+  }
+]
