@@ -63,20 +63,37 @@ export default function CriteriaArrow({pokemonEvolution}: { pokemonEvolution: Ev
     if (pokemonEvolution.waysToEvolve.length > 1) return defaultElement(pokemonEvolution.waysToEvolve);
 
     // Special pokemon
-    if (pokemonEvolution.pokedexNumber === 292) return <CriteriaBox text={"Level up to 20, have empty slot in party, have pokéball in bag"}/>;
-    if (pokemonEvolution.pokedexNumber === 892) return <CriteriaBox text={"Train in Tower of Darkness or Tower of Waters"}/>;
-    if (pokemonEvolution.pokedexNumber === 865) return <CriteriaBox text={"Land three critical hits in a battle"}/>;
-    if (pokemonEvolution.pokedexNumber === 869) return <CriteriaBox text={"Spin whilst holding Sweet"}/>
-    if (pokemonEvolution.pokedexNumber === 867) return <CriteriaBox text={"Take 49 or more damage and then run under stone arch in the Dusty Bowl"}/>
-    if (pokemonEvolution.pokedexNumber === 899) return <CriteriaBox text={"Use Psyshield Bash 20 times in Agile Style"}/>
-    if (pokemonEvolution.pokedexNumber === 904) return <CriteriaBox text={"Use Barb Barrage 20 times in Agile Style"}/>
-    if (pokemonEvolution.pokedexNumber === 550) return <CriteriaBox text={"Take 294 recoil damage in battle"}/>
-    if (pokemonEvolution.pokedexNumber === 923 || pokemonEvolution.pokedexNumber === 947 || pokemonEvolution.pokedexNumber === 954 || pokemonEvolution.pokedexNumber === 947) return <CriteriaBox text={"Walk 1000 steps in Let's Go"}/>
-    if (pokemonEvolution.pokedexNumber === 925) return <CriteriaBox text={"Level up to 25+ in battle"}/>
-    if (pokemonEvolution.pokedexNumber === 964) return <CriteriaBox text={"Level up to 28 in Union Circle"}/>
-    if (pokemonEvolution.pokedexNumber === 979) return <CriteriaBox text={"Use Rage Fist 20 times"}/>
-    if (pokemonEvolution.pokedexNumber === 983) return <CriteriaBox text={"Defeat 3 Bisharp that are holding Leader's Crest and then level up"}/>
-    if (pokemonEvolution.pokedexNumber === 1000) return <CriteriaBox text={"Collect 999 Gimmighoul Coins and then level up"}/>
+    const pokedexNumber = pokemonEvolution.pokedexNumber;
+    if (pokedexNumber === 292) return <CriteriaBox text={"Level up to 20, have empty slot in party, have pokéball in bag"}/>;
+    if (pokedexNumber === 892) return <CriteriaBox text={"Train in Tower of Darkness or Tower of Waters"}/>;
+    if (pokedexNumber === 865) return <CriteriaBox text={"Land three critical hits in a battle"}/>;
+    if (pokedexNumber === 869) return <CriteriaBox text={"Spin whilst holding Sweet"}/>
+    if (pokedexNumber === 867) return <CriteriaBox text={"Take 49 or more damage and then run under stone arch in the Dusty Bowl"}/>
+    if (pokedexNumber === 899) return <CriteriaBox text={"Use Psyshield Bash 20 times in Agile Style"}/>
+    if (pokedexNumber === 904) return <CriteriaBox text={"Use Barb Barrage 20 times in Agile Style"}/>
+    if (pokedexNumber === 550) return <CriteriaBox text={"Take 294 recoil damage in battle"}/>
+    if (pokedexNumber === 923 || pokedexNumber === 947 || pokedexNumber === 954 || pokedexNumber === 947) return <CriteriaBox text={"Walk 1000 steps in Let's Go"}/>
+    if (pokedexNumber === 925) return <CriteriaBox text={"Level up to 25+ in battle"}/>
+    if (pokedexNumber === 964) return <CriteriaBox text={"Level up to 28 in Union Circle"}/>
+    if (pokedexNumber === 979) return <CriteriaBox text={"Use Rage Fist 20 times"}/>
+    if (pokedexNumber === 983) return <CriteriaBox text={"Defeat 3 Bisharp that are holding Leader's Crest and then level up"}/>
+    if (pokedexNumber === 1000) return <CriteriaBox text={"Collect 999 Gimmighoul Coins and then level up"}/>
+
+    // Alolan pokemon
+    if(pokedexNumber === 20) return <CriteriaBox text={"Level up to 20"} tooltipList={["At night if Alolan form"]}/>
+    if(pokedexNumber === 28) return <CriteriaBox text={"Level up to 22"} tooltipList={["Or use an Ice Stone if Alolan form"]}/>
+    if(pokedexNumber === 38) return <CriteriaBox text={"Use a Fire Stone"} tooltipList={["Or use an Ice Stone if Alolan form"]}/>
+    if(pokedexNumber === 53) return <CriteriaBox text={"Level up to 28"} tooltipList={["Or have high friendship if Alolan form"]}/>
+    if(pokedexNumber === 80) return <CriteriaBox text={"Level up to 37"} tooltipList={["Or use Galarica Cuff if Galarian form"]}/>
+    if(pokedexNumber === 199) return <CriteriaBox text={"Trade holding Kings Rock"} tooltipList={["Or use Galarica Wreath if Galarian form"]}/>
+    if(pokedexNumber === 105) return <CriteriaBox text={"Level up to 28"} tooltipList={["At night if Alolan form"]}/>
+    if(pokedexNumber === 470) return <CriteriaBox text={"Use Leaf Stone"} tooltipList={["Or level up in Eterna Forest, Pinwheel Forest, or Kalos Route 20"]}/>
+    if(pokedexNumber === 471) return <CriteriaBox text={"Use Ice Stone"} tooltipList={["Or level up in Route 217, Twist Mountain, or Frost Cavern"]}/>
+    if(pokedexNumber === 700) return <CriteriaBox text={"Level up when knows Fairy-type move and either has 2 affection in Gen 6-7 or >160 happiness in Gen 8"}/>
+    if(pokedexNumber === 476) return <CriteriaBox text={"Level up in Kalos Route 13, Chargestone Cave, or Mt. Coronet"}/>
+    if(pokedexNumber === 555) return <CriteriaBox text={"Level up to 35"} tooltipList={["Or use an Ice Stone if Alolan form"]}/>
+    if(pokedexNumber === 745) return <CriteriaBox text={"Level Up to 25 during the day in Sun/Ultra Sun, during the night in Moon/Ultra Moon, or any time in Galar and Paldea"}/>
+
 
     const wayToEvolve = pokemonEvolution.waysToEvolve[0];
 
