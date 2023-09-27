@@ -105,7 +105,7 @@ export default function Navbar() {
                                 </Center>
                                 <br />
                                 <MenuDivider />
-                                <MenuItem>Your Games</MenuItem>
+                                <MenuItem><Link as={NextLink} href='/owned-games'>Your Games</Link></MenuItem>
                                 <MenuItem>Help</MenuItem>
                                 <MenuItem>Account Settings</MenuItem>
                                 <MenuItem>Logout</MenuItem>

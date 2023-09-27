@@ -20,10 +20,6 @@ async function getPokemon() : Promise<Pokemon[]> {
     return getData('pokemon');
 }
 
-async function getUser() : Promise<User> {
-    return getData('users/123');
-}
-
 async function getEvolutionChains() : Promise<EvolutionChain[]> {
     return getData('evolution-chains');
 }
