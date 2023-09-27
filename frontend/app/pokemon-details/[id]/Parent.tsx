@@ -28,8 +28,8 @@ import Game from "@/data/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";
 import EvolutionChain from "@/data/EvolutionChain";
 import useSWR from "swr";
-import Breeding from "@/app/pokemon-details/[id]/BreedingV3";
-import Evolutions from "@/app/pokemon-details/[id]/EvolutionsV2";
+import Breeding from "@/app/pokemon-details/[id]/Breeding";
+import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
 
 const MAX_POKEDEX_NUMBER = 1017;
 const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];

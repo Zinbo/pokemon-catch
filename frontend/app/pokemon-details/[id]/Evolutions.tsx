@@ -63,7 +63,7 @@ export default function Evolutions({evolutionChain} : {evolutionChain: Evolution
     return (
         <Card>
             <CardHeader>
-                <Heading size='md'>Evolutions V2</Heading>
+                <Heading size='md'>Evolutions</Heading>
             </CardHeader>
 
             <CardBody>
