@@ -9,6 +9,7 @@ import {Box, Card, CardBody, CardHeader, Flex, Heading, Text} from "@chakra-ui/r
 import {findOwnedPokemonInChain} from "@/lib/PokemonService";
 import {Icon} from "@chakra-ui/icons";
 import {HiOutlineArrowLongRight} from "react-icons/hi2";
+import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
 
 export default function Breeding({user, pokemon, evolutionChain}: {
     user: User | undefined,
@@ -27,13 +28,7 @@ export default function Breeding({user, pokemon, evolutionChain}: {
         )
         if(!next.waysToEvolve.length) return [pokemonCard];
 
-        const criteria = next.waysToEvolve.map(criteria => `Trigger: ${criteria.trigger}, Conditions: [${criteria.triggerCriteria.map(c => `${c.type}: ${c.value}`).join(", ")}]`).join(" OR ");
-        const arrow = (
-            <Flex direction={"column"} className={"criteria"} justifyContent={"center"} alignItems={"center"}>
-                <Icon boxSize={"4em"} viewBox={"0 0 24 10"} as={HiOutlineArrowLongRight}/>
-                <Text>{criteria}</Text>
-            </Flex>
-        )
+        const arrow = <CriteriaArrow pokemonEvolution={next}/>
 
         return [arrow, pokemonCard];
     }

@@ -4,9 +4,7 @@ import {Card, CardBody, CardHeader, Flex, Heading, Text} from "@chakra-ui/react"
 import React from "react";
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Image from "next/image";
-import {ArrowForwardIcon, ArrowRightIcon, Icon} from "@chakra-ui/icons";
-import {HiOutlineArrowLongRight} from "react-icons/hi2";
-import {CgArrowLongRight} from "react-icons/cg";
+import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
 
 export default function Evolutions({evolutionChain} : {evolutionChain: EvolutionChain}) {
 
@@ -18,20 +16,14 @@ export default function Evolutions({evolutionChain} : {evolutionChain: Evolution
 
     const getEvoSection = (next: EvolvesTo) => {
         const pokemonCard = (
-            <Flex direction={"column"} alignItems={"center"}>
+            <Flex direction={"column"} alignItems={"center"} className={"pokemon-evo"}>
                 <Image src={`/images/list/${next.pokedexNumber}.png`} width="96" height="96" alt="pokemon"/>
                 <Text>{next.name}</Text>
             </Flex>
         )
         if(!next.waysToEvolve.length) return [pokemonCard];
 
-        const criteria = next.waysToEvolve.map(criteria => `Trigger: ${criteria.trigger}, Conditions: [${criteria.triggerCriteria.map(c => `${c.type}: ${c.value}`).join(", ")}]`).join(" OR ");
-        const arrow = (
-            <Flex direction={"column"} className={"criteria"} justifyContent={"center"} alignItems={"center"} flex={1}>
-                <Icon boxSize={"4em"} viewBox={"0 0 24 10"} as={HiOutlineArrowLongRight}/>
-                <Text>{criteria}</Text>
-            </Flex>
-        )
+        const arrow = <CriteriaArrow pokemonEvolution={next}/>
 
         return [arrow, pokemonCard];
     }
@@ -44,18 +36,18 @@ export default function Evolutions({evolutionChain} : {evolutionChain: Evolution
 
         const childElements = next.evolvesTo.map(child => {
             return (
-                <Flex justifyContent={"space-between"}>
+                <Flex justifyContent={"space-between"} className={"child-evo"}>
                     {calculateElements(child)}
                 </Flex>
             )
         });
-        const rows = <Flex direction={"column"} justifyContent={"center"}>{childElements}</Flex>
+        const rows = <Flex direction={"column"} justifyContent={"center"} className={"child-evo-row"}>{childElements}</Flex>
         return [...own, rows];
 
     }
 
     const Evo = () => (
-        <Flex justifyContent={"center"} alignItems={"center"}>
+        <Flex justifyContent={"center"} alignItems={"center"} className={"first-evo-row"}>
             {calculateElements(evolutionChain.chain)}
         </Flex>
     )
