@@ -60,7 +60,9 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
         if (filters.onlyShowBreedable && !p.breedable) return false;
         if (filters.onlyShowBestEncounters && !hasBestEncounterInGame(p)) return false;
         if (!!selectedGame && !p.encounterDetails.encounters.find(e => e.location.gameId === selectedGame.id)) return false;
-        return !searchTerm || p.name.toLowerCase().startsWith(searchTerm.toLowerCase());
+
+        const potentialNumber = parseInt(searchTerm);
+        return !searchTerm || (!!potentialNumber && p.pokedexNumber === potentialNumber) || (p.name.toLowerCase().startsWith(searchTerm.toLowerCase()));
 
     }
 
