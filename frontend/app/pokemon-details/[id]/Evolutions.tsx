@@ -1,22 +1,22 @@
 'use client'
 
-import {Card, CardBody, CardHeader, Flex, Heading, Text} from "@chakra-ui/react";
+import {Card, CardBody, CardHeader, Flex, Heading} from "@chakra-ui/react";
 import React from "react";
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
-import Image from "next/image";
 import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
+import {PokemonWithMeta} from "@/data/Pokemon";
+import PokemonImage from "@/app/PokemonImage";
 
-export default function Evolutions({evolutionChain}: { evolutionChain: EvolutionChain }) {
+export default function Evolutions({evolutionChain, allPokemonInChain}: { evolutionChain: EvolutionChain, allPokemonInChain: PokemonWithMeta[] }) {
 
-    // have a list of rows
-    // first row with one column is the first evo
-    // then for each child there is a second row added
 
     const getEvoSection = (next: EvolvesTo) => {
+
+        const pokemon = (allPokemonInChain.find(p => p.pokedexNumber === next.pokedexNumber) as PokemonWithMeta);
+
         const pokemonCard = (
             <Flex direction={"column"} alignItems={"center"} className={"pokemon-evo"}>
-                <Image src={`/images/list/${next.pokedexNumber}.png`} width="96" height="96" alt="pokemon"/>
-                <Text>{next.name}</Text>
+                <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned} canBeAcquired={pokemon.catchable}/>
             </Flex>
         )
         if (!next.waysToEvolve.length) return [pokemonCard];

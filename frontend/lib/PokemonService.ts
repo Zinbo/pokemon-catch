@@ -1,4 +1,4 @@
-import Pokemon, {Encounter} from "@/data/Pokemon";
+import Pokemon, {Encounter, PokemonWithMeta} from "@/data/Pokemon";
 import User from "@/data/User";
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Game from "@/data/Game";
@@ -60,4 +60,30 @@ export function canBeAcquired(pokemon: Pokemon, evolutionChain: EvolutionChain, 
 export function notOwnedAndCanBeBred(pokemon : Pokemon, evolutionChain: EvolutionChain, user: User) {
     if(userOwnsPokemon(pokemon.pokedexNumber, user)) return false;
     return canBeBred(evolutionChain, user);
+}
+
+export function calculateMetaDataForPokemon(pokemon: Pokemon, evolutionChain: EvolutionChain, user: User | null | undefined): PokemonWithMeta {
+    if (!user) return {
+        ...pokemon,
+        owned: true,
+        catchable: true,
+        breedable: false,
+    }
+
+    const owned = userOwnsPokemon(pokemon.pokedexNumber, user);
+    const catchable = canBeAcquired(pokemon, evolutionChain, user);
+    const breedable = notOwnedAndCanBeBred(pokemon, evolutionChain, user);
+    return {
+        ...pokemon,
+        owned,
+        catchable,
+        breedable,
+    };
+}
+
+export function calculateMetaDataForAllPokemon(pokemon: Pokemon[], evolutionChains: EvolutionChain[], user: User | null | undefined) {
+    return pokemon.map((p) => {
+        const evolutionChain = (evolutionChains.find(e => e.id === p.evolutionChainId) as EvolutionChain);
+        return calculateMetaDataForPokemon(p, evolutionChain, user);
+    });
 }

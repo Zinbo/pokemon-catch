@@ -5,7 +5,7 @@ import User from "@/data/User";
 import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";
 import Game from "@/data/Game";
 import EvolutionChain from "@/data/EvolutionChain";
-import {canBeAcquired, notOwnedAndCanBeBred, userOwnsPokemon} from "@/lib/PokemonService";
+import {calculateMetaDataForAllPokemon} from "@/lib/PokemonService";
 import Filters from "@/app/Filters";
 import React, {useEffect, useState} from "react";
 import Search from "@/app/Search";
@@ -15,31 +15,6 @@ interface Props {
     pokemon: Pokemon[]
     games: Game[]
     evolutionChains: EvolutionChain[]
-}
-
-const calculateMetaDataForPokemon = (pokemon: Pokemon[], evolutionChains: EvolutionChain[], user: User | null) => {
-
-    return pokemon.map((p) => {
-        const evolutionChain = (evolutionChains.find(e => e.id === p.evolutionChainId) as EvolutionChain);
-        if (user === null) return {
-            ...p,
-            owned: true,
-            catchable: true,
-            breedable: false,
-            evolutionChain
-        }
-
-        const owned = userOwnsPokemon(p.pokedexNumber, user);
-        const catchable = canBeAcquired(p, evolutionChain, user);
-        const breedable = notOwnedAndCanBeBred(p, evolutionChain, user);
-        return {
-            ...p,
-            owned,
-            catchable,
-            breedable,
-            evolutionChain
-        };
-    });
 }
 
 const MAX_POKEDEX_NUMBER = 1017;
@@ -77,7 +52,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
         getData();
     }, []);
 
-    const calculatedPokemon: PokemonWithMeta[] = calculateMetaDataForPokemon(pokemon, evolutionChains, user);
+    const calculatedPokemon: PokemonWithMeta[] = calculateMetaDataForAllPokemon(pokemon, evolutionChains, user);
 
     const isVisible = (p: PokemonWithMeta) => {
         if (filters.hideOwned && p.owned) return false;

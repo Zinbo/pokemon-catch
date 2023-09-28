@@ -1,7 +1,7 @@
 'use client'
 
 import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
-import Pokemon from "@/data/Pokemon";
+import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";
 import User from "@/data/User";
 import Image from "next/image";
 import React from "react";
@@ -10,20 +10,23 @@ import {findOwnedPokemonInChain} from "@/lib/PokemonService";
 import {Icon} from "@chakra-ui/icons";
 import {HiOutlineArrowLongRight} from "react-icons/hi2";
 import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
+import PokemonImage from "@/app/PokemonImage";
 
-export default function Breeding({user, pokemon, evolutionChain}: {
+export default function Breeding({user, pokemon, evolutionChain, allPokemonInChain}: {
     user: User | undefined,
     pokemon: Pokemon,
     evolutionChain: EvolutionChain
+    allPokemonInChain: PokemonWithMeta[]
 }) {
 
     let toBreedFrom: EvolvesTo|undefined = undefined;
 
     const getCard = (next: EvolvesTo) => {
+        const pokemon = (allPokemonInChain.find(p => p.pokedexNumber === next.pokedexNumber) as PokemonWithMeta);
+
         const pokemonCard = (
             <Flex direction={"column"} alignItems={"center"}>
-                <Image src={`/images/list/${next.pokedexNumber}.png`} width="96" height="96" alt="pokemon"/>
-                <Text>{next.name}</Text>
+                <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned} canBeAcquired={pokemon.catchable}/>
             </Flex>
         )
         if(!next.waysToEvolve.length) return [pokemonCard];

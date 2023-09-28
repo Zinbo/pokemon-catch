@@ -22,7 +22,13 @@ import React from "react";
 import User from "@/data/User";
 import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
 import Link from "next/link";
-import {calculateChainCompletion, canBeBred, canCatch} from "@/lib/PokemonService";
+import {
+    calculateChainCompletion,
+    calculateMetaDataForAllPokemon,
+    calculateMetaDataForPokemon,
+    canBeBred,
+    canCatch
+} from "@/lib/PokemonService";
 import Pokemon from "@/data/Pokemon";
 import Game from "@/data/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";
@@ -47,6 +53,8 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function Parent({pokemon, evolutionChain, games, allPokemonInChain}: Props) {
     const {data: user, error} = useSWR<User, any>(`/users/123`, fetcher);
+
+    const allPokemonWithMetaInChain = calculateMetaDataForAllPokemon(allPokemonInChain, [evolutionChain], user);
 
     const getFormattedPokedexNumber = (pokemon: Pokemon) => {
         const number = pokemon.pokedexNumber;
@@ -160,10 +168,10 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                     </Box>
 
                     <Box>
-                        <Evolutions evolutionChain={evolutionChain}/>
+                        <Evolutions evolutionChain={evolutionChain} allPokemonInChain={allPokemonWithMetaInChain}/>
                     </Box>
                     <Box>
-                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}/>
+                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain} allPokemonInChain={allPokemonWithMetaInChain}/>
                     </Box>
                     <Flex justifyContent={"space-between"}>
                         {pokemon.pokedexNumber > 1 &&
