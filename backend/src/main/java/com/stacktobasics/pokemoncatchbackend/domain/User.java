@@ -6,7 +6,11 @@ import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.annotation.Id;
 
-import java.util.*;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
@@ -19,14 +23,7 @@ public class User {
     @Id
     String id;
     Set<Game> ownedGames = new HashSet<>();
-    Set<Integer> ownedPokemon = new HashSet<>();
-
-    public void addGame(@NonNull String gameName, @NonNull GameRepository gameRepository) {
-        Optional<Game> foundGame = gameRepository.findById(gameName);
-        foundGame.ifPresentOrElse(
-                game -> ownedGames.add(game),
-                () -> log.warn("trying to add game \"{}\" that does not exist", gameName));
-    }
+    Set<OwnedPokemon> ownedPokemon = new HashSet<>();
 
     public void replaceGames(@NonNull List<String> gameNames, @NonNull GameRepository gameRepository) {
         List<Game> savedGames = gameRepository.findAll();
@@ -37,11 +34,12 @@ public class User {
     }
 
     public void addPokemon(@NonNull Integer pokedexNumber, @NonNull PokemonRepository pokemonRepository) {
+        if(ownedPokemon.stream().anyMatch(p -> p.pokedexNumber() == pokedexNumber)) return;
         Optional<Pokemon> pokemon = pokemonRepository.findById(pokedexNumber);
-        pokemon.ifPresent(p -> ownedPokemon.add(pokedexNumber));
+        pokemon.ifPresent(p -> ownedPokemon.add(new OwnedPokemon(pokedexNumber, Instant.now())));
     }
 
     public void removePokemon(@NonNull Integer pokedexNumber) {
-        ownedPokemon.remove(pokedexNumber);
+        ownedPokemon.removeIf(p -> p.pokedexNumber() == pokedexNumber);
     }
 }

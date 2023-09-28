@@ -4,5 +4,10 @@ import Pokemon from "@/data/Pokemon";
 export default interface User {
     id: string
     ownedGames: Game[]
-    ownedPokemon: number[]
+    ownedPokemon: OwnedPokemon[]
+}
+
+export interface OwnedPokemon {
+    pokedexNumber: number
+    collectedDate: Date
 }

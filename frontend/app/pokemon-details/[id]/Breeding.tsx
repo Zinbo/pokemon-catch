@@ -6,7 +6,7 @@ import User from "@/data/User";
 import Image from "next/image";
 import React from "react";
 import {Box, Card, CardBody, CardHeader, Flex, Heading, HStack, Stack, Text} from "@chakra-ui/react";
-import {findOwnedPokemonInChain} from "@/lib/PokemonService";
+import {findOwnedPokemonInChain, userOwnsPokemon} from "@/lib/PokemonService";
 import {Icon} from "@chakra-ui/icons";
 import {HiOutlineArrowLongRight} from "react-icons/hi2";
 import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
@@ -159,7 +159,7 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
 
     const Render = () => {
         if (!user) return <></>;
-        if (user.ownedPokemon.includes(pokemon.pokedexNumber)) return <></>;
+        if (userOwnsPokemon(pokemon.pokedexNumber, user)) return <></>;
 
         return (
             <Card flex={1}>

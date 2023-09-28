@@ -25,7 +25,7 @@ async function getEvolutionChains() : Promise<EvolutionChain[]> {
 
 export default async function Home() {
     const evolutionChains = await getEvolutionChains();
-    const pokemon = await getPokemon();
+    const pokemon = (await getPokemon()).sort((a, b) => a.pokedexNumber - b.pokedexNumber);
 
     return(
         <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>

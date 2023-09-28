@@ -18,11 +18,17 @@ import {
     StatNumber
 } from "@chakra-ui/react";
 import Image from "next/image";
-import React from "react";
+import React, {useEffect, useState} from "react";
 import User from "@/data/User";
 import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
 import Link from "next/link";
-import {calculateChainCompletion, calculateMetaDataForAllPokemon, canBeBred, canCatch} from "@/lib/PokemonService";
+import {
+    calculateChainCompletion,
+    calculateMetaDataForAllPokemon,
+    canBeBred,
+    canCatch,
+    userOwnsPokemon
+} from "@/lib/PokemonService";
 import Pokemon from "@/data/Pokemon";
 import Game from "@/data/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";
@@ -47,8 +53,13 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function Parent({pokemon, evolutionChain, games, allPokemonInChain}: Props) {
     const {data: user, error} = useSWR<User, any>(`/users/123`, fetcher);
-
     const allPokemonWithMetaInChain = calculateMetaDataForAllPokemon(allPokemonInChain, [evolutionChain], user);
+    const [collectedDate, setUserCollectedDate] = useState<Date | undefined>();
+
+    useEffect(() => {
+        const date = user?.ownedPokemon.find(p => p.pokedexNumber === pokemon.pokedexNumber)?.collectedDate;
+        if(!!date) setUserCollectedDate(new Date(date));
+    }, [user]);
 
     const getFormattedPokedexNumber = (pokemon: Pokemon) => {
         const number = pokemon.pokedexNumber;
@@ -60,7 +71,7 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
     }
 
     const getGenerationRomanNumeral = (pokemon: Pokemon) => {
-        const number = pokemon.pokedexNumber  || 0;
+        const number = pokemon.pokedexNumber || 0;
         let found = false;
         let generationIndex = 0;
         while (!found) {
@@ -70,16 +81,20 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
         return ROMAN_NUMERALS[generationIndex];
     }
 
-    const getChainCompletionPercentage = (evolutionChain : EvolutionChain, user : User | undefined) => {
-        if(!user) return "100%";
+    const getChainCompletionPercentage = (evolutionChain: EvolutionChain, user: User | undefined) => {
+        if (!user) return "100%";
         const result = calculateChainCompletion(evolutionChain, user);
         return `${((result.noCaught / result.noInChain) * 100).toFixed(2)}%`;
     }
 
-    const Badges = ({pokemon, evolutionChain, user} : {pokemon: Pokemon, evolutionChain: EvolutionChain, user : User | undefined}) => {
-        if(!user) return <></>;
+    const Badges = ({pokemon, evolutionChain, user}: {
+        pokemon: Pokemon,
+        evolutionChain: EvolutionChain,
+        user: User | undefined
+    }) => {
+        if (!user) return <></>;
         const badges: React.JSX.Element[] = [];
-        if (user?.ownedPokemon.includes(pokemon.pokedexNumber)) badges.push(<Badge colorScheme='green'>Caught</Badge>)
+        if (userOwnsPokemon(pokemon.pokedexNumber, user)) badges.push(<Badge colorScheme='green'>Caught</Badge>)
         else badges.push(<Badge colorScheme='gray'>Not caught</Badge>)
 
         if (canCatch(pokemon, user?.ownedGames)) badges.push(<Badge colorScheme='green'>Can catch</Badge>)
@@ -117,7 +132,8 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                                             <Box>
                                                 <Heading size='xl'>{pokemon.name}</Heading>
                                                 <Heading size='sm'>{getFormattedPokedexNumber(pokemon)}</Heading>
-                                                <Heading size='xs'>Generation {getGenerationRomanNumeral(pokemon)}</Heading>
+                                                <Heading
+                                                    size='xs'>Generation {getGenerationRomanNumeral(pokemon)}</Heading>
 
                                                 <Badges pokemon={pokemon} evolutionChain={evolutionChain} user={user}/>
                                             </Box>
@@ -127,10 +143,15 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                                                     <StatLabel>Evolution Chain Completion</StatLabel>
                                                     <StatNumber>{getChainCompletionPercentage(evolutionChain, user)}</StatNumber>
                                                 </Stat>
-                                                <Stat>
-                                                    <StatLabel>Added to collection [PLACEHOLDER]</StatLabel>
-                                                    <StatNumber>2023-08-01</StatNumber>
-                                                </Stat>
+                                                {collectedDate && (<Stat>
+                                                    <StatLabel>Added to collection</StatLabel>
+                                                    <StatNumber>{collectedDate?.toLocaleString('default', {
+                                                        year: "numeric",
+                                                        month: "long",
+                                                        day: "numeric"
+                                                    })} </StatNumber>
+                                                    <StatNumber>{collectedDate?.toLocaleTimeString('default',{ hour: 'numeric', minute: 'numeric', hour12: true })}</StatNumber>
+                                                </Stat>)}
                                             </Box>
                                         </Stack>
                                     </CardBody>
@@ -167,7 +188,8 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
 
 
                     <Box>
-                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain} allPokemonInChain={allPokemonWithMetaInChain}/>
+                        <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}
+                                  allPokemonInChain={allPokemonWithMetaInChain}/>
                     </Box>
                     <Flex justifyContent={"space-between"}>
                         {pokemon.pokedexNumber > 1 &&

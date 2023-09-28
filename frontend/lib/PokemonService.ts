@@ -4,7 +4,7 @@ import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
 import Game from "@/data/Game";
 
 export function userOwnsPokemon(pokedexNumber: number, user: User) {
-    return user.ownedPokemon.includes(pokedexNumber);
+    return !!user.ownedPokemon.find(o => o.pokedexNumber === pokedexNumber);
 }
 
 export function canBeBred(evolutionChain: EvolutionChain, user: User) {
@@ -32,7 +32,7 @@ export function calculateChainCompletion(evolutionChain : EvolutionChain, user :
 }
 
 function calculateCompletion(next : EvolvesTo, user : User) {
-    let calculation = {noInChain: 1, noCaught: user.ownedPokemon.includes(next.pokedexNumber) ? 1 : 0};
+    let calculation = {noInChain: 1, noCaught: user.ownedPokemon.find(o => (o.pokedexNumber === next.pokedexNumber)) ? 1 : 0};
     if(!next?.evolvesTo?.length) {
         return calculation;
     }
