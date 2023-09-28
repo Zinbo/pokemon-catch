@@ -72,7 +72,7 @@ export default function Encounters({pokemon, games, user} : {pokemon: Pokemon, g
             </CardHeader>
 
             <CardBody>
-                <Checkbox isChecked={showAllEncounters} onChange={e => setShowAllEncounters(e.target.checked)}>Show all encounters</Checkbox>
+                <Checkbox isChecked={showAllEncounters} onChange={e => setShowAllEncounters(e.target.checked)} paddingBottom={"5px"}>Show encounters from all games</Checkbox>
                 <Box style={{border: "1px solid #E2E8F0", borderRadius: "12px"}}>
                     <CustomTable columns={columns} data={encounters}/>
                 </Box>

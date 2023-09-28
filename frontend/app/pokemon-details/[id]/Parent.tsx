@@ -158,12 +158,14 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                     </Card>
 
                     <Box>
-                        <Encounters pokemon={pokemon} games={games} user={user}/>
+                        <Evolutions evolutionChain={evolutionChain} allPokemonInChain={allPokemonWithMetaInChain}/>
                     </Box>
 
                     <Box>
-                        <Evolutions evolutionChain={evolutionChain} allPokemonInChain={allPokemonWithMetaInChain}/>
+                        <Encounters pokemon={pokemon} games={games} user={user}/>
                     </Box>
+
+
                     <Box>
                         <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain} allPokemonInChain={allPokemonWithMetaInChain}/>
                     </Box>
