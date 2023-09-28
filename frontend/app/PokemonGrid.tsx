@@ -1,5 +1,5 @@
 'use client'
-import {Box, Grid} from "@chakra-ui/react";
+import {Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Box, Grid} from "@chakra-ui/react";
 import PokemonGridItem from "@/app/PokemonGridItem";
 import User from "@/data/User";
 import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";
@@ -81,7 +81,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
         groupByGeneration[generation].push(p);
     })
 
-    const Accordion = () => {
+    const GenerationAccordion = () => {
         return groupByGeneration.map((pokemonInGeneration, index) => {
             return (
                 <PokemonAccordionItem key={index} isVisible={!!pokemonInGeneration.find(isVisible)} heading={`Generation ${ROMAN_NUMERALS[index]}`}>
@@ -99,13 +99,15 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
             )
         })
     }
+
+
     return (
         <>
             <Box>
                 <Search filters={filters} setFilters={setFilters} searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         selectedGame={selectedGame} setSelectedGame={setSelectedGame} games={games}/>
             </Box>
-            {Accordion()}
+            {GenerationAccordion()}
         </>
     )
 }
