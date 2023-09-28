@@ -30,6 +30,7 @@ import EvolutionChain from "@/data/EvolutionChain";
 import useSWR from "swr";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
+import TypeColours from "@/data/Types";
 
 const MAX_POKEDEX_NUMBER = 1017;
 const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];
@@ -105,7 +106,7 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                     </BreadcrumbItem>
                 </Breadcrumb>
                 <Stack spacing='4'>
-                    <Card backgroundColor={"#5dbe62"}>
+                    <Card backgroundColor={TypeColours[pokemon.types[0]]}>
                         <CardBody>
                             <Flex justifyContent={"space-between"}>
                                 <Card>

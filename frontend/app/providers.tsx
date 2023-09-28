@@ -11,7 +11,21 @@ const colors = {
         700: '#2a69ac',
     },
 }
-export const theme = extendTheme({ colors })
+
+import {Epilogue} from 'next/font/google'
+
+const epilogue = Epilogue({
+    weight: ["300", "400"],
+    style: ["normal", "italic"],
+    subsets: ["latin"],
+});
+
+
+export const theme = extendTheme({ colors,
+fonts: {
+    heading: epilogue.style.fontFamily,
+    body: epilogue.style.fontFamily
+}})
 
 export function Providers({
                               children
@@ -20,7 +34,7 @@ export function Providers({
 }) {
     return (
         <CacheProvider>
-            <ChakraProvider>
+            <ChakraProvider theme={theme}>
                 {children}
             </ChakraProvider>
         </CacheProvider>

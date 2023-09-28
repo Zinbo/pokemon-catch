@@ -24,6 +24,7 @@ export default interface Pokemon {
     generation: number
     encounterDetails: EncounterDetails
     evolutionChainId: number
+    types: number[]
 }
 
 export interface PokemonWithMeta extends Pokemon {
