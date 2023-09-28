@@ -51,4 +51,12 @@ public class PokemonController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @GetMapping(params = {"name"})
+    public ResponseEntity<Pokemon> getPokemonByName(@RequestParam String name) {
+        log.info("Getting pokemon {}...", name);
+        return pokemonRepository.findByName(name)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

@@ -14,8 +14,12 @@ async function getData(path: string) {
     return res.json();
 }
 
-async function getPokemon(id: number) : Promise<Pokemon> {
+async function getPokemonById(id: number) : Promise<Pokemon> {
     return getData(`pokemon/${id}`);
+}
+
+async function getPokemonByName(name: string) : Promise<Pokemon> {
+    return getData(`pokemon?name=${name}`);
 }
 
 function getAllIdsInChain(next : EvolvesTo) {
@@ -43,10 +47,11 @@ async function getEvolutionChain(id: number) : Promise<EvolutionChain> {
 
 export default async function Page({params}: {
     params: {
-        id: number
+        id: string
     }
 }) {
-    const pokemon = await getPokemon(params.id);
+    const potentialNumber = parseInt(params.id);
+    const pokemon = !!potentialNumber ? (await getPokemonById(potentialNumber)) : (await getPokemonByName(params.id.substring(0, 1).toUpperCase() + params.id.substring(1)));
     const evolutionChain = await getEvolutionChain(pokemon.evolutionChainId);
     const allPokemonInChain = await getAllPokemonInChain(evolutionChain);
 
