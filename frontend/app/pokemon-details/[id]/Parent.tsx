@@ -22,13 +22,7 @@ import React from "react";
 import User from "@/data/User";
 import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
 import Link from "next/link";
-import {
-    calculateChainCompletion,
-    calculateMetaDataForAllPokemon,
-    calculateMetaDataForPokemon,
-    canBeBred,
-    canCatch
-} from "@/lib/PokemonService";
+import {calculateChainCompletion, calculateMetaDataForAllPokemon, canBeBred, canCatch} from "@/lib/PokemonService";
 import Pokemon from "@/data/Pokemon";
 import Game from "@/data/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";

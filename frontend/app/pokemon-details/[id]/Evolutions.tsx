@@ -7,7 +7,15 @@ import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
 import {PokemonWithMeta} from "@/data/Pokemon";
 import PokemonImage from "@/app/PokemonImage";
 
-export default function Evolutions({evolutionChain, allPokemonInChain}: { evolutionChain: EvolutionChain, allPokemonInChain: PokemonWithMeta[] }) {
+interface ColumnsPair {
+    arrows: React.JSX.Element[]
+    pokemonImages: React.JSX.Element[]
+}
+
+export default function Evolutions({evolutionChain, allPokemonInChain}: {
+    evolutionChain: EvolutionChain,
+    allPokemonInChain: PokemonWithMeta[]
+}) {
 
 
     const getEvoSection = (next: EvolvesTo) => {
@@ -15,47 +23,62 @@ export default function Evolutions({evolutionChain, allPokemonInChain}: { evolut
         const pokemon = (allPokemonInChain.find(p => p.pokedexNumber === next.pokedexNumber) as PokemonWithMeta);
 
         const pokemonCard = (
-            <Flex direction={"column"} alignItems={"center"} className={"pokemon-evo"}>
-                <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned} canBeAcquired={pokemon.catchable}/>
+            <Flex direction={"column"} alignItems={"center"}>
+                <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned}
+                              canBeAcquired={pokemon.catchable}/>
             </Flex>
         )
-        if (!next.waysToEvolve.length) return [pokemonCard];
+        if (!next.waysToEvolve.length) return {pokemonCard};
 
         const arrow = <CriteriaArrow pokemonEvolution={next}/>
 
-        return [arrow, pokemonCard];
+        return {arrow, pokemonCard};
     }
 
-    const calculateElements = (next: EvolvesTo): React.JSX.Element[] => {
-        const own = getEvoSection(next);
-        if (!next.evolvesTo.length) return own;
+    const columns: ColumnsPair[] = [{arrows: [], pokemonImages: []}];
 
-        if (next.evolvesTo.length === 1) return [...own, ...calculateElements(next.evolvesTo[0])];
+    const calculateNextColumn = (next: EvolvesTo, index: number) => {
+        const {arrow, pokemonCard} = getEvoSection(next);
 
-        const childElements = next.evolvesTo.map(child => {
-            return (
-                <Flex justifyContent={"space-between"} className={"child-evo"}>
-                    {calculateElements(child)}
-                </Flex>
-            )
-        });
-        const rows = <Flex direction={"column"} justifyContent={"center"}
-                           className={"child-evo-row"}>{childElements}</Flex>
-        return [...own, rows];
+        if (arrow) columns[index].arrows.push(arrow);
+        columns[index].pokemonImages.push(pokemonCard);
 
+        if (!next.evolvesTo.length) return;
+
+        columns.push({arrows: [], pokemonImages: []});
+
+        index++;
+
+        next.evolvesTo.forEach(child => calculateNextColumn(child, index));
+        return;
     }
 
     const Evo = () => {
         if (!evolutionChain.chain.evolvesTo?.length) return <>Pokemon does not evolve</>;
+        calculateNextColumn(evolutionChain.chain, 0);
+
         return (
-            <Flex justifyContent={"center"} alignItems={"center"} className={"first-evo-row"}>
-                {calculateElements(evolutionChain.chain)}
+            <Flex justifyContent={"center"} gap={"20px"} className={"evo-chart"}>
+                {columns.map(c => (
+                    <>
+                        {!!c.arrows.length &&
+                            <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                                  alignItems={"center"}>
+                                {c.arrows}
+                            </Flex>}
+                        <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                              alignItems={"center"}>
+                            {c.pokemonImages}
+                        </Flex>
+
+                    </>
+                ))}
             </Flex>
         )
     }
 
     return (
-        <Card>
+        <Card flex={1}>
             <CardHeader>
                 <Heading size='md'>Evolutions</Heading>
             </CardHeader>

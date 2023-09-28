@@ -151,7 +151,7 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
         if (user.ownedPokemon.includes(pokemon.pokedexNumber)) return <></>;
 
         return (
-            <Card>
+            <Card flex={1}>
                 <CardHeader>
                     <Heading size='md'>Breeding</Heading>
                 </CardHeader>
