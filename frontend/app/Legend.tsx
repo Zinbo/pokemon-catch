@@ -44,7 +44,7 @@ export default function Legend() {
                                 <Text>Caught, and cannot be caught with current games</Text>
                             </Flex>
                             <Flex alignItems={"center"}>
-                                <Image src={"/egg.svg"} width={96} height={96} alt={"egg"}/>
+                                <Image src={`/images/list/egg.png`} width={96} height={96} alt={"egg"}/>
                                 <Text>Can be bred from existing pokemon</Text>
                             </Flex>
                             <Flex alignItems={"center"}>

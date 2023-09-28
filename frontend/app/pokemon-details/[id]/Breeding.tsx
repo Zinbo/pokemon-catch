@@ -21,14 +21,22 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
 
     let toBreedFrom: EvolvesTo|undefined = undefined;
 
-    const getCard = (next: EvolvesTo) => {
-        const pokemon = (allPokemonInChain.find(p => p.pokedexNumber === next.pokedexNumber) as PokemonWithMeta);
+    const getPokemonImage = (pokedexNumber: number) => {
+        const pokemon = (allPokemonInChain.find(p => p.pokedexNumber === pokedexNumber) as PokemonWithMeta);
+        return <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned} canBeAcquired={pokemon.catchable}/>;
 
-        const pokemonCard = (
+    }
+
+    const Column = ({pokedexNumber}: { pokedexNumber: number }) => {
+        return (
             <Flex direction={"column"} alignItems={"center"}>
-                <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned} canBeAcquired={pokemon.catchable}/>
+                {getPokemonImage(pokedexNumber)}
             </Flex>
         )
+    }
+
+    const getCard = (next: EvolvesTo) => {
+        const pokemonCard = <Column pokedexNumber={next.pokedexNumber}/>
         if(!next.waysToEvolve.length) return [pokemonCard];
 
         const arrow = <CriteriaArrow pokemonEvolution={next}/>
@@ -36,16 +44,9 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
         return [arrow, pokemonCard];
     }
 
-    const Column = ({image, name}: { image: React.JSX.Element, name?: string }) => {
-        return (
-            <Flex direction={"column"} alignItems={"center"}>
-                <Box>{image}</Box>
-                {name ? name : " "}
-            </Flex>
-        )
-    }
 
-    const Egg = () => <Image id={`eggBreed`} src={`/egg.svg`} width="96" height="96" alt="pokemon"/>;
+
+    const Egg = () => <Image id={`eggBreed`} src={`/images/list/egg.png`} width="96" height="96" alt="pokemon"/>;
 
     const getSteps = (ownedPokemonNumber: number, ownedPokemonName: string, desiredPokemonNumber: number, evolutionChain: EvolutionChain) :  React.JSX.Element[][] => {
 
@@ -53,7 +54,7 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
 
         // step 1, if not a baby then from pokemon to egg
         const eggStep: React.JSX.Element[] = [];
-        eggStep.push(<Flex direction={"column"} alignItems={"center"}><Image src={`/images/list/${ownedPokemonNumber}.png`} width="96" height="96" alt="pokemon"/><Text>{ownedPokemonName}</Text></Flex>);
+        eggStep.push(<Flex direction={"column"} alignItems={"center"}>{getPokemonImage(ownedPokemonNumber)}</Flex>);
         eggStep.push((<Flex direction={"column"} className={"criteria"} justifyContent={"center"} alignItems={"center"}><Icon boxSize={"4em"} viewBox={"0 0 24 10"} as={HiOutlineArrowLongRight}/></Flex>))
         eggStep.push(<Egg/>)
 
@@ -120,7 +121,7 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
     }
 
     const PokemonCard = ({breedingSteps}: {breedingSteps: React.JSX.Element[][]}) => {
-        if(!breedingSteps.length) return (
+        if(!breedingSteps.length || !toBreedFrom) return (
             <CardBody>
                 <Text>Not possible with current collection</Text>
             </CardBody>
@@ -129,9 +130,7 @@ export default function Breeding({user, pokemon, evolutionChain, allPokemonInCha
         return (
             <CardBody>
                 <Heading size={"sm"}>Breed from:</Heading>
-                <Column
-                    image={<Image src={`/images/list/${toBreedFrom?.pokedexNumber}.png`} width="96" height="96"
-                                  alt="pokemon"/>} name={toBreedFrom?.name}/>
+                <Column pokedexNumber={toBreedFrom.pokedexNumber}/>
                 <Heading size={"sm"}>Breeding Instructions:</Heading>
                 <Flex direction={"column"} justifyContent={"center"} alignItems={"center"}>
                     {breedingSteps.map((step, index) => (

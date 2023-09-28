@@ -35,7 +35,7 @@ export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquire
     const Egg = () => {
         if(!canBeBred) return <></>;
         return (
-            <Image src="/egg.svg" alt={"egg"} width={32} height={32}
+            <Image src="/images/list/egg-cropped.png" alt={"egg"} width={32} height={32}
                    style={{
                        position: "absolute",
                        top: 0,
