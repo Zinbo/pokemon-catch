@@ -50,7 +50,7 @@ const PokemonGridItem = memo(function PokemonGridItem(
         }}/>
     }
 
-    const Card = useMemo(() => {
+    const FlipCard = useMemo(() => {
         return (
             <>
                 <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"} className='pokemon-grid-item--off'>
@@ -74,9 +74,82 @@ const PokemonGridItem = memo(function PokemonGridItem(
         )
     }, [isOwned, canBeAcquired, canBeBred, hasBestCatchRate])
 
+    const GreyOutCard = useMemo(() => {
+        return (
+            <>
+                <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}  position={"relative"} className='pokemon-grid-item-transparent'>
+                    <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}  position={"relative"} className='pokemon-grid-item-transparent--off'>
+                        <div style={{position: "relative"}}>
+                            <Image src={`/images/list/${pokedexNumber}.png`} width="96" height="96" alt={`i+1`}
+                                   style={{...getStyle(), display: "block"}}/>
+                            <Egg/>
+                            <Star/>
+
+                        </div>
+                        <Text className={pokemonFont.className} fontSize='xs'>{name}</Text>
+                    </Flex>
+                    <Flex position={"absolute"} className='pokemon-grid-item-transparent--on' style={{width: '100%'}} justifyContent={"space-evenly"}>
+                        <IconButton isRound={true} variant='outline'  size='lg' aria-label='Search database' backgroundColor={"white"}
+                                    icon={<ViewIcon/>}  onClick={() => router.push(`/pokemon-details/${pokedexNumber}`)} colorScheme={"black"}/>
+                        <IconButton isRound={true} size='lg' variant='outline' backgroundColor={"white"} aria-label='Search database' colorScheme={"black"}
+                                    icon={isOwned ? <DeleteIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/> : <CheckIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/>}/>
+                    </Flex>
+                </Flex>
+            </>
+        )
+    }, [isOwned, canBeAcquired, canBeBred, hasBestCatchRate])
+
+    const FadeCard = useMemo(() => {
+        return (
+            <>
+                <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}  position={"relative"} className='pokemon-grid-item-fade'>
+                    <div style={{position: "relative"}} className='pokemon-grid-item-fade--off'>
+                        <Image src={`/images/list/${pokedexNumber}.png`} width="96" height="96" alt={`i+1`}
+                               style={{...getStyle(), display: "block"}}/>
+                        <Egg/>
+                        <Star/>
+
+                    </div>
+                    <Text className={pokemonFont.className} fontSize='xs'>{name}</Text>
+                    <Flex position={"absolute"} className='pokemon-grid-item-fade--on' style={{width: '100%'}} justifyContent={"space-evenly"}>
+                        <IconButton isRound={true} size='lg' aria-label='Search database'
+                                    icon={<ViewIcon/>} onClick={() => router.push(`/pokemon-details/${pokedexNumber}`)}/>
+                        <IconButton isRound={true} size='lg' aria-label='Search database'
+                                    icon={isOwned ? <DeleteIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/> : <CheckIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/>}/>
+                    </Flex>
+                </Flex>
+            </>
+        )
+    }, [isOwned, canBeAcquired, canBeBred, hasBestCatchRate])
+
+    const FadeWithTextCard = useMemo(() => {
+        return (
+            <>
+                <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}  position={"relative"} className='pokemon-grid-item-fade'>
+                    <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}  position={"relative"} className='pokemon-grid-item-fade--off'>
+                        <div style={{position: "relative"}}>
+                            <Image src={`/images/list/${pokedexNumber}.png`} width="96" height="96" alt={`i+1`}
+                                   style={{...getStyle(), display: "block"}}/>
+                            <Egg/>
+                            <Star/>
+
+                        </div>
+                        <Text className={pokemonFont.className} fontSize='xs'>{name}</Text>
+                    </Flex>
+                    <Flex position={"absolute"} className='pokemon-grid-item-fade--on'>
+                        <IconButton isRound={true} size='lg' aria-label='Search database'
+                                    icon={<ViewIcon/>} onClick={() => router.push(`/pokemon-details/${pokedexNumber}`)}/>
+                        <IconButton isRound={true} size='lg' aria-label='Search database'
+                                    icon={isOwned ? <DeleteIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/> : <CheckIcon onClick={() => toggleCatchStatus(pokedexNumber, isOwned)}/>}/>
+                    </Flex>
+                </Flex>
+            </>
+        )
+    }, [isOwned, canBeAcquired, canBeBred, hasBestCatchRate])
+
     return (
-        <GridItem id="card" border='1px' borderColor='gray.200' backgroundColor={"white"} className='pokemon-grid-item' style={{display: visible ? "block" : "none"}}>
-            {Card}
+        <GridItem id="card" border='1px' borderColor='gray.200' backgroundColor={"white"}  style={{display: visible ? "block" : "none"}} className={'pokemon-grid-item'}>
+            {GreyOutCard}
         </GridItem>
 
     )

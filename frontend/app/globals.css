@@ -10,3 +10,33 @@ body {
 .pokemon-grid-item:hover .pokemon-grid-item--on {
     display: flex;
 }
+
+
+
+.pokemon-grid-item-fade .pokemon-grid-item-fade--on {
+    display: none;
+}
+
+.pokemon-grid-item-fade:hover .pokemon-grid-item-fade--off {
+    filter: blur(8px);
+    -webkit-filter: blur(8px);
+}
+
+.pokemon-grid-item-fade:hover .pokemon-grid-item-fade--on {
+    display: flex;
+}
+
+
+
+
+.pokemon-grid-item-transparent .pokemon-grid-item-transparent--on {
+    display: none;
+}
+
+.pokemon-grid-item-transparent:hover .pokemon-grid-item-transparent--off {
+    opacity: 15%;
+}
+
+.pokemon-grid-item-transparent:hover .pokemon-grid-item-transparent--on {
+    display: flex;
+}
