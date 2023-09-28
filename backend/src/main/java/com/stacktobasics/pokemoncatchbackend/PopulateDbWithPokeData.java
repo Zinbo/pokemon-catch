@@ -77,28 +77,11 @@ public class PopulateDbWithPokeData {
                 });
     }
 
-    private void downloadAndSaveImage(int id, String descriptionImage, String folder) {
-        String path = String.format("images/%s/%d.png", folder, id);
-        if (Files.exists(Path.of(path))) return;
-        try (InputStream in = new URL(descriptionImage).openStream()) {
-            Files.copy(in, Paths.get(path));
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void populatePokemonV2Batch(int start, int end) {
         Map<Integer, Integer> generations = getGenerations();
 
         for (int i = start; i <= end; i++) {
             PokemonDTO dto = client.getPokemon(i);
-            String listImage = dto.sprites.frontDefault;
-            String descriptionImage = dto.sprites.other.officialArtwork.frontDefault;
-            downloadAndSaveImage(dto.id, listImage, "list");
-            downloadAndSaveImage(dto.id, descriptionImage, "description");
-
             var species = client.getPokemonSpecies(i);
             var name = species.names.stream().filter(n -> n.language.name.equals("en")).map(n -> n.name).findFirst().orElse(species.name);
             var matcher = idFromUrl.matcher(species.evolutionChain.url);
@@ -107,7 +90,12 @@ public class PopulateDbWithPokeData {
             var evolutionChainId = Integer.parseInt(matcher.group(1));
 
             var canBreed = Optional.ofNullable(species.eggGroups).filter(s -> !s.isEmpty()).map(s -> !"no-eggs".equals(s.get(0).name)).orElse(false);
-            var pokemon = new Pokemon(dto.id, name, generations.get(dto.id), canBreed);
+            var types = dto.types.stream().map(t -> {
+                var typeMatch = idFromUrl.matcher(t.type.url);
+                if(!typeMatch.find()) throw new InternalException("Could not find matching pattern for number in url: " + t.type.url);
+                return Integer.parseInt(typeMatch.group(1));
+            }).toList();
+            var pokemon = new Pokemon(dto.id, name, generations.get(dto.id), canBreed, types);
             pokemon.setEvolutionChainId(evolutionChainId);
 
             // add encounters
@@ -144,19 +132,24 @@ public class PopulateDbWithPokeData {
         }
     }
 
-    public void initialiseEvolutionChains(int start, int end) {
+    public void initialisePokemonNamesInEvoChains(int start, int end) {
         for (int i = start; i <= end; i++) {
-
-            try {
-                log.info("Saving evolution chain [{}]", i);
-                var evolutionDTO = client.getEvolutionChain(i);
-                var evolutionChain = getEvolutionChain(evolutionDTO);
-                evolutionChainRepository.save(evolutionChain);
-            } catch (HttpClientErrorException e) {
-                if (e.getStatusCode().value() != 404) throw e;
-            }
+            var evoChain = evolutionChainV2Repository.findById(i);
+            var index = i;
+            evoChain.ifPresentOrElse(e -> {
+                setNameForEvo(e.getChain());
+                evolutionChainV2Repository.save(e);
+                log.info("Saving evolution chain [{}]", index);
+            }, () -> log.error("Could not find evo chain with id [{}], ignoring this one", index));
         }
-        log.info("Finished saving all evolution chains");
+    }
+
+    private void setNameForEvo(EvolvesTo evolvesTo) {
+        pokemonRepository.findById(evolvesTo.getPokedexNumber()).ifPresentOrElse(p -> {
+            var properName = p.getName();
+            evolvesTo.setName(properName);
+            evolvesTo.getEvolvesTo().forEach(this::setNameForEvo);
+        }, () -> log.error("Could not find pokemon with id [{}], ignoring this one", evolvesTo.getPokedexNumber()));
     }
 
     public void initialiseEvolutionChainsV2(int start, int end) {

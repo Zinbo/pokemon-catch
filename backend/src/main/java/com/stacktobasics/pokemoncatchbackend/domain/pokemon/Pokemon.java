@@ -22,12 +22,14 @@ public class Pokemon implements AggregateRoot {
     private EncounterDetails encounterDetails = new EncounterDetails();
     private int evolutionChainId;
     private boolean canBreed;
+    private List<Integer> types;
 
-    public Pokemon(@NonNull Integer pokedexNumber, @NonNull String name, int generation, boolean canBreed) {
+    public Pokemon(@NonNull Integer pokedexNumber, @NonNull String name, int generation, boolean canBreed, @NonNull List<Integer> types) {
         this.pokedexNumber = pokedexNumber;
         this.name = name;
         this.generation = generation;
         this.canBreed = canBreed;
+        this.types = types;
     }
 
     public void addEncounter(int catchRate, @NonNull String location, int gameId,

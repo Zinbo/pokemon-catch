@@ -32,15 +32,7 @@ public class PokemonController {
         log.info("Populated pokemon and evolution chains.");
     }
 
-    @PostMapping(value = "/reinitialise-evolutions", params = {"start", "end"})
-    public void reinitialiseEvolutions(@RequestParam int start, @RequestParam int end) {
-        populateDbWithPokeData.initialiseEvolutionChains(start, end);
-    }
 
-    @PostMapping(value = "/reinitialise-evolutionsv2", params = {"start", "end"})
-    public void reinitialiseEvolutionsV2(@RequestParam int start, @RequestParam int end) {
-        populateDbWithPokeData.initialiseEvolutionChainsV2(start, end);
-    }
 
     @PostMapping("/import-caught-pokemon")
     public void importCaughtPokemon(@RequestBody List<String> caughtPokemon) {

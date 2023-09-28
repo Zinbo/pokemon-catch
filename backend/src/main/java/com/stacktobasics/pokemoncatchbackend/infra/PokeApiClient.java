@@ -19,7 +19,7 @@ public class PokeApiClient {
     public static final String POKEAPI_BASE_URL = "https://pokeapi.co/api/v2/";
     private final RestTemplate restTemplate;
     private final boolean shouldGetAllPokemon;
-    public static final int LAST_GENERATION = 8;
+    public static final int LAST_GENERATION = 9;
     public static final Map<String, Object> cache = new HashMap<>();
 
     public PokeApiClient(@Value("${feature-toggle.should-get-all-pokemon}") boolean shouldGetAllPokemon) {

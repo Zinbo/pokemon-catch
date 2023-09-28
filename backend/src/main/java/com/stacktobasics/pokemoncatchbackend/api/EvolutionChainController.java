@@ -1,10 +1,8 @@
 package com.stacktobasics.pokemoncatchbackend.api;
 
-import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChain;
-import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChainRepository;
+import com.stacktobasics.pokemoncatchbackend.PopulateDbWithPokeData;
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2;
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2Repository;
-import com.stacktobasics.pokemoncatchbackend.domain.pokemon.Pokemon;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +13,11 @@ import org.springframework.web.bind.annotation.*;
 public class EvolutionChainController {
 
     private final EvolutionChainV2Repository evolutionChainRepository;
+    private final PopulateDbWithPokeData populateDbWithPokeData;
 
-    public EvolutionChainController(EvolutionChainV2Repository evolutionChainRepository) {
+    public EvolutionChainController(EvolutionChainV2Repository evolutionChainRepository, PopulateDbWithPokeData populateDbWithPokeData) {
         this.evolutionChainRepository = evolutionChainRepository;
+        this.populateDbWithPokeData = populateDbWithPokeData;
     }
 
     @GetMapping
@@ -31,4 +31,15 @@ public class EvolutionChainController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PostMapping(value = "/reinitialise-evolutionsv2", params = {"start", "end"})
+    public void reinitialiseEvolutionsV2(@RequestParam int start, @RequestParam int end) {
+        populateDbWithPokeData.initialiseEvolutionChainsV2(start, end);
+    }
+
+    @PostMapping(value = "/reinitialise-pokemon-names", params = {"start", "end"})
+    public void reinitialisePokemonNames(@RequestParam int start, @RequestParam int end) {
+        populateDbWithPokeData.initialisePokemonNamesInEvoChains(start, end);
+    }
+
 }
