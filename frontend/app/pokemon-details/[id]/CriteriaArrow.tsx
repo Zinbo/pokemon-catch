@@ -60,8 +60,6 @@ const defaultElement = (waysToEvolve: EvolutionCriteria[]) => {
 
 export default function CriteriaArrow({pokemonEvolution}: { pokemonEvolution: EvolvesTo }) {
 
-    if (pokemonEvolution.waysToEvolve.length > 1) return defaultElement(pokemonEvolution.waysToEvolve);
-
     // Special pokemon
     const pokedexNumber = pokemonEvolution.pokedexNumber;
     if (pokedexNumber === 292) return <CriteriaBox text={"Level up to 20, have empty slot in party, have pokéball in bag"}/>;
