@@ -1,5 +1,5 @@
 'use client'
-import {Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Box, Grid} from "@chakra-ui/react";
+import {Box, Grid, Text} from "@chakra-ui/react";
 import PokemonGridItem from "@/app/PokemonGridItem";
 import User from "@/data/User";
 import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";
@@ -84,7 +84,8 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
     const GenerationAccordion = () => {
         return groupByGeneration.map((pokemonInGeneration, index) => {
             return (
-                <PokemonAccordionItem key={index} isVisible={!!pokemonInGeneration.find(isVisible)} heading={`Generation ${ROMAN_NUMERALS[index]}`}>
+                <PokemonAccordionItem key={index} isVisible={!!pokemonInGeneration.find(isVisible)}
+                                      heading={`Generation ${ROMAN_NUMERALS[index]}`}>
                     <Grid templateColumns='repeat(8, 1fr)'>
                         {pokemonInGeneration.map((p) => {
                             return <PokemonGridItem key={p.pokedexNumber} pokedexNumber={p.pokedexNumber} name={p.name}
@@ -97,9 +98,10 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
                     </Grid>
                 </PokemonAccordionItem>
             )
-        })
+        });
     }
 
+    const hasResults = !!groupByGeneration.find(group => group.find(isVisible));
 
     return (
         <>
@@ -107,6 +109,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
                 <Search filters={filters} setFilters={setFilters} searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         selectedGame={selectedGame} setSelectedGame={setSelectedGame} games={games}/>
             </Box>
+            {!hasResults && <Text alignSelf={"center"}>No results found - do you have any filters enabled?</Text>}
             {GenerationAccordion()}
         </>
     )
