@@ -18,14 +18,14 @@ export default function Evolutions({evolutionChain, allPokemonInChain}: {
 }) {
 
 
-    const getEvoSection = (next: EvolvesTo) => {
+    const getEvoSection = (next: EvolvesTo, alolan: boolean, galarian: boolean) => {
 
         const pokemon = (allPokemonInChain.find(p => p.pokedexNumber === next.pokedexNumber) as PokemonWithMeta);
 
         const pokemonCard = (
             <Flex direction={"column"} alignItems={"center"}>
                 <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned}
-                              canBeAcquired={pokemon.catchable}/>
+                              canBeAcquired={pokemon.catchable} alolan={alolan} galarian={galarian}/>
             </Flex>
         )
         if (!next.waysToEvolve.length) return {pokemonCard};
@@ -35,10 +35,9 @@ export default function Evolutions({evolutionChain, allPokemonInChain}: {
         return {arrow, pokemonCard};
     }
 
-    const columns: ColumnsPair[] = [{arrows: [], pokemonImages: []}];
 
-    const calculateNextColumn = (next: EvolvesTo, index: number) => {
-        const {arrow, pokemonCard} = getEvoSection(next);
+    const calculateNextColumn = (next: EvolvesTo, index: number, columns: ColumnsPair[], alolan: boolean, galarian: boolean) => {
+        const {arrow, pokemonCard} = getEvoSection(next, alolan, galarian);
 
         if (arrow) columns[index].arrows.push(arrow);
         columns[index].pokemonImages.push(pokemonCard);
@@ -49,31 +48,73 @@ export default function Evolutions({evolutionChain, allPokemonInChain}: {
 
         index++;
 
-        next.evolvesTo.forEach(child => calculateNextColumn(child, index));
+        next.evolvesTo.forEach(child => calculateNextColumn(child, index, columns, alolan, galarian));
         return;
     }
 
     const Evo = () => {
-        if (!evolutionChain.chain.evolvesTo?.length) return <>Pokemon does not evolve</>;
-        calculateNextColumn(evolutionChain.chain, 0);
+        if (allPokemonInChain.length === 1) return <>Pokemon does not evolve</>;
+        const columns = [{arrows: [], pokemonImages: []}];
+        if (!!evolutionChain.chain.evolvesTo.length) calculateNextColumn(evolutionChain.chain, 0, columns, false, false);
+
+        const alolanFormColumns = [{arrows: [], pokemonImages: []}];
+        if (!!evolutionChain.alolanChain) calculateNextColumn(evolutionChain.alolanChain, 0, alolanFormColumns, true, false);
+
+        const galarianFormColumns = [{arrows: [], pokemonImages: []}];
+        if (!!evolutionChain.galarianChain) calculateNextColumn(evolutionChain.galarianChain, 0, galarianFormColumns, false, true);
 
         return (
-            <Flex justifyContent={"center"} gap={"20px"} className={"evo-chart"}>
-                {columns.map(c => (
-                    <>
-                        {!!c.arrows.length &&
+            <>
+                <Flex justifyContent={"center"} gap={"20px"} className={"evo-chart"}>
+                    {columns.map(c => (
+                        <>
+                            {!!c.arrows.length &&
+                                <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                                      alignItems={"center"}>
+                                    {c.arrows}
+                                </Flex>}
                             <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
                                   alignItems={"center"}>
-                                {c.arrows}
-                            </Flex>}
-                        <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
-                              alignItems={"center"}>
-                            {c.pokemonImages}
-                        </Flex>
+                                {c.pokemonImages}
+                            </Flex>
 
-                    </>
-                ))}
-            </Flex>
+                        </>
+                    ))}
+                </Flex>
+                <Flex justifyContent={"center"} gap={"20px"} className={"evo-chart"}>
+                    {alolanFormColumns.map(c => (
+                        <>
+                            {!!c.arrows.length &&
+                                <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                                      alignItems={"center"}>
+                                    {c.arrows}
+                                </Flex>}
+                            <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                                  alignItems={"center"}>
+                                {c.pokemonImages}
+                            </Flex>
+
+                        </>
+                    ))}
+                </Flex>
+                <Flex justifyContent={"center"} gap={"20px"} className={"evo-chart"}>
+                    {galarianFormColumns.map(c => (
+                        <>
+                            {!!c.arrows.length &&
+                                <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                                      alignItems={"center"}>
+                                    {c.arrows}
+                                </Flex>}
+                            <Flex className={"evo-chart-column"} direction={"column"} justifyContent={"center"}
+                                  alignItems={"center"}>
+                                {c.pokemonImages}
+                            </Flex>
+
+                        </>
+                    ))}
+                </Flex>
+            </>
+
         )
     }
 

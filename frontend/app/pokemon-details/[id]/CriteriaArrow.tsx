@@ -77,19 +77,11 @@ export default function CriteriaArrow({pokemonEvolution}: { pokemonEvolution: Ev
     if (pokedexNumber === 983) return <CriteriaBox text={"Defeat 3 Bisharp that are holding Leader's Crest and then level up"}/>
     if (pokedexNumber === 1000) return <CriteriaBox text={"Collect 999 Gimmighoul Coins and then level up"}/>
 
-    // Alolan pokemon
-    if(pokedexNumber === 20) return <CriteriaBox text={"Level up to 20"} tooltipList={["At night if Alolan form"]}/>
-    if(pokedexNumber === 28) return <CriteriaBox text={"Level up to 22"} tooltipList={["Or use an Ice Stone if Alolan form"]}/>
-    if(pokedexNumber === 38) return <CriteriaBox text={"Use a Fire Stone"} tooltipList={["Or use an Ice Stone if Alolan form"]}/>
-    if(pokedexNumber === 53) return <CriteriaBox text={"Level up to 28"} tooltipList={["Or have high friendship if Alolan form"]}/>
-    if(pokedexNumber === 80) return <CriteriaBox text={"Level up to 37"} tooltipList={["Or use Galarica Cuff if Galarian form"]}/>
-    if(pokedexNumber === 199) return <CriteriaBox text={"Trade holding Kings Rock"} tooltipList={["Or use Galarica Wreath if Galarian form"]}/>
-    if(pokedexNumber === 105) return <CriteriaBox text={"Level up to 28"} tooltipList={["At night if Alolan form"]}/>
-    if(pokedexNumber === 470) return <CriteriaBox text={"Use Leaf Stone"} tooltipList={["Or level up in Eterna Forest, Pinwheel Forest, or Kalos Route 20"]}/>
+
     if(pokedexNumber === 471) return <CriteriaBox text={"Use Ice Stone"} tooltipList={["Or level up in Route 217, Twist Mountain, or Frost Cavern"]}/>
+    if(pokedexNumber === 470) return <CriteriaBox text={"Use Leaf Stone"} tooltipList={["Or level up in Eterna Forest, Pinwheel Forest, or Kalos Route 20"]}/>
     if(pokedexNumber === 700) return <CriteriaBox text={"Level up when knows Fairy-type move and either has 2 affection in Gen 6-7 or >160 happiness in Gen 8"}/>
     if(pokedexNumber === 476) return <CriteriaBox text={"Level up in Kalos Route 13, Chargestone Cave, or Mt. Coronet"}/>
-    if(pokedexNumber === 555) return <CriteriaBox text={"Level up to 35"} tooltipList={["Or use an Ice Stone if Alolan form"]}/>
     if(pokedexNumber === 745) return <CriteriaBox text={"Level Up to 25 during the day in Sun/Ultra Sun, during the night in Moon/Ultra Moon, or any time in Galar and Paldea"}/>
 
 

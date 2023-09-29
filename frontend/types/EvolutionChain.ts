@@ -2,6 +2,8 @@ export default interface EvolutionChain {
     id: number;
     baby ?: Baby;
     chain: EvolvesTo;
+    alolanChain ?: EvolvesTo;
+    galarianChain ?: EvolvesTo;
 }
 
 export interface EvolvesTo {

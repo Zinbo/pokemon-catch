@@ -10,6 +10,8 @@ interface Props {
     canBeAcquired: boolean,
     canBeBred?: boolean,
     hasBestCatchRate?: boolean
+    alolan ?: boolean
+    galarian ?: boolean
 }
 
 const NOT_CAUGHT = {WebkitFilter: "grayscale(100%)", filter: "grayscale(100%)"};
@@ -24,7 +26,7 @@ const pokemonFont = localFont({
     ],
     variable: '--font-pokemon'
 })
-export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquired, canBeBred, hasBestCatchRate}: Props) {
+export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquired, canBeBred, hasBestCatchRate, alolan, galarian}: Props) {
 
     const getStyle = () => {
         if (isOwned) return {};
@@ -53,10 +55,12 @@ export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquire
         }}/>
     }
 
+    const imageName = !!alolan ? `${pokedexNumber}-alola` : !!galarian ? `${pokedexNumber}-galar` : `${pokedexNumber}`;
+
     return (
         <>
             <div style={{position: "relative"}}>
-                <Image src={`/images/list/${pokedexNumber}.png`} width="96" height="96" alt={`i+1`}
+                <Image src={`/images/list/${imageName}.png`} width="96" height="96" alt={`i+1`}
                        style={{...getStyle(), display: "block"}}/>
                 <Egg/>
                 <Star/>

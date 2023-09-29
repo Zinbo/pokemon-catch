@@ -1,5 +1,7 @@
 package com.stacktobasics.pokemoncatchbackend;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stacktobasics.pokemoncatchbackend.domain.GameRepository;
 import com.stacktobasics.pokemoncatchbackend.domain.PokemonRepository;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.Baby;
@@ -23,13 +25,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,13 +47,16 @@ public class PopulateDbWithPokeData {
     private final EvolutionChainV2Repository evolutionChainV2Repository;
     private final Pattern idFromUrl = Pattern.compile("[^v](\\d+)");
 
+    private final ObjectMapper objectMapper;
+
     public PopulateDbWithPokeData(PokeApiClient client, GameRepository gameRepository,
-                                  PokemonRepository pokemonRepository, EvolutionChainRepository evolutionChainRepository, EvolutionChainV2Repository evolutionChainV2Repository) {
+                                  PokemonRepository pokemonRepository, EvolutionChainRepository evolutionChainRepository, EvolutionChainV2Repository evolutionChainV2Repository, ObjectMapper objectMapper) {
         this.client = client;
         this.gameRepository = gameRepository;
         this.pokemonRepository = pokemonRepository;
         this.evolutionChainRepository = evolutionChainRepository;
         this.evolutionChainV2Repository = evolutionChainV2Repository;
+        this.objectMapper = objectMapper;
     }
 
 
@@ -92,7 +90,8 @@ public class PopulateDbWithPokeData {
             var canBreed = Optional.ofNullable(species.eggGroups).filter(s -> !s.isEmpty()).map(s -> !"no-eggs".equals(s.get(0).name)).orElse(false);
             var types = dto.types.stream().map(t -> {
                 var typeMatch = idFromUrl.matcher(t.type.url);
-                if(!typeMatch.find()) throw new InternalException("Could not find matching pattern for number in url: " + t.type.url);
+                if (!typeMatch.find())
+                    throw new InternalException("Could not find matching pattern for number in url: " + t.type.url);
                 return Integer.parseInt(typeMatch.group(1));
             }).toList();
             var pokemon = new Pokemon(dto.id, name, generations.get(dto.id), canBreed, types);
@@ -244,7 +243,7 @@ public class PopulateDbWithPokeData {
         chain.setChain(toEvolvesTo(evolvesToDTO));
         return chain;
     }
-    
+
     private EvolvesTo toEvolvesTo(EvolvesToDTO evolvesToDTO) {
         EvolvesTo evolvesTo = new EvolvesTo();
         evolvesTo.setWaysToEvolve(evolvesToDTO.evolutionDetails.stream().map(ed -> {
@@ -311,4 +310,39 @@ public class PopulateDbWithPokeData {
         }
     }
 
+    public void addAlolanChains() throws JsonProcessingException {
+
+        var allAlolanPokemon = new int[]{
+                20,
+                28,
+                38,
+                53,
+                105
+        };
+
+        // All alolan pokemon follow the pattern:
+            // 1. They all have 1 evolution
+            // 2. That evolution uses the second way to evolve in the waysToEvolve array.
+
+        // For meowth, deleted perrserker from the chains manually
+
+        for (int id : allAlolanPokemon) {
+            var alolanPokemon = pokemonRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Could not find pokemon with id: " + id));
+            var evoChain = evolutionChainV2Repository.findById(alolanPokemon.getEvolutionChainId()).orElseThrow(() -> new IllegalArgumentException("Could not find chain with id: " + id));
+            var ogChain = evoChain.getChain();
+            if(ogChain.getEvolvesTo().get(0).getWaysToEvolve().size() < 2) {
+                log.warn("Cannot continue setting Alolan form for [{}]. Has it already been set? Ignoring for now.", id);
+                continue;
+            }
+
+            var alolanChain = objectMapper.readValue(objectMapper.writeValueAsString(ogChain), EvolvesTo.class);
+
+            ogChain.getEvolvesTo().get(0).getWaysToEvolve().remove(1);
+            alolanChain.getEvolvesTo().get(0).getWaysToEvolve().remove(0);
+
+            evoChain.setAlolanChain(alolanChain);
+
+            evolutionChainV2Repository.save(evoChain);
+        }
+    }
 }

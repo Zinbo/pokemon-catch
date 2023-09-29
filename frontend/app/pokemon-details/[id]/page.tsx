@@ -22,7 +22,8 @@ async function getPokemonByName(name: string) : Promise<Pokemon> {
     return getData(`pokemon?name=${name}`);
 }
 
-function getAllIdsInChain(next : EvolvesTo) {
+function getAllIdsInChain(next ?: EvolvesTo) {
+    if(!next) return [];
     let calculation = [next.pokedexNumber]
     if(!next?.evolvesTo?.length) {
         return calculation;
@@ -36,8 +37,8 @@ function getAllIdsInChain(next : EvolvesTo) {
 }
 
 async function getAllPokemonInChain(evolutionChain: EvolutionChain) : Promise<Pokemon[]> {
-    const ids = getAllIdsInChain(evolutionChain.chain);
-    const promises = ids.map(id => getData(`pokemon/${id}`));
+    const ids = new Set([...getAllIdsInChain(evolutionChain.chain), ...getAllIdsInChain(evolutionChain.alolanChain), ...getAllIdsInChain(evolutionChain.galarianChain)]);
+    const promises = [...ids].map(id => getData(`pokemon/${id}`));
     return Promise.all(promises);
 }
 

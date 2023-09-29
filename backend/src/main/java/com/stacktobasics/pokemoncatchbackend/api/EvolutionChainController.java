@@ -1,5 +1,6 @@
 package com.stacktobasics.pokemoncatchbackend.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stacktobasics.pokemoncatchbackend.PopulateDbWithPokeData;
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2;
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2Repository;
@@ -42,4 +43,8 @@ public class EvolutionChainController {
         populateDbWithPokeData.initialisePokemonNamesInEvoChains(start, end);
     }
 
+    @PostMapping(value = "/add-alolan-chains")
+    public void addAlolanChains() throws JsonProcessingException {
+        populateDbWithPokeData.addAlolanChains();
+    }
 }

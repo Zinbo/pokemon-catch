@@ -14,4 +14,6 @@ public class EvolutionChainV2 {
     private int id;
     private Baby baby;
     private EvolvesTo chain;
+    private EvolvesTo alolanChain;
+    private EvolvesTo galarianChain;
 }
