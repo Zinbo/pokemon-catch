@@ -1,8 +1,8 @@
 'use client'
 
-import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
-import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";
-import User from "@/data/User";
+import EvolutionChain, {EvolvesTo} from "@/types/EvolutionChain";
+import Pokemon, {PokemonWithMeta} from "@/types/Pokemon";
+import User from "@/types/User";
 import Image from "next/image";
 import React from "react";
 import {Box, Card, CardBody, CardHeader, Flex, Heading, HStack, Stack, Text} from "@chakra-ui/react";

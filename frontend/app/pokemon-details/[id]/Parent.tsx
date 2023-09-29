@@ -19,7 +19,7 @@ import {
 } from "@chakra-ui/react";
 import Image from "next/image";
 import React, {useEffect, useState} from "react";
-import User from "@/data/User";
+import User from "@/types/User";
 import {ArrowBackIcon, ArrowForwardIcon, ExternalLinkIcon} from "@chakra-ui/icons";
 import Link from "next/link";
 import {
@@ -29,14 +29,14 @@ import {
     canCatch,
     userOwnsPokemon
 } from "@/lib/PokemonService";
-import Pokemon from "@/data/Pokemon";
-import Game from "@/data/Game";
+import Pokemon from "@/types/Pokemon";
+import Game from "@/types/Game";
 import Encounters from "@/app/pokemon-details/[id]/Encounters";
-import EvolutionChain from "@/data/EvolutionChain";
+import EvolutionChain from "@/types/EvolutionChain";
 import useSWR from "swr";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
 import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
-import TypeColours from "@/data/Types";
+import TypeColours from "@/types/Types";
 
 const MAX_POKEDEX_NUMBER = 1017;
 const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, MAX_POKEDEX_NUMBER];

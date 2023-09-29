@@ -1,4 +1,4 @@
-import {EvolutionCriteria, EvolvesTo} from "@/data/EvolutionChain";
+import {EvolutionCriteria, EvolvesTo} from "@/types/EvolutionChain";
 import {Flex, ListItem, Text, Tooltip, UnorderedList} from "@chakra-ui/react";
 import {Icon, InfoIcon} from "@chakra-ui/icons";
 import {HiOutlineArrowLongRight} from "react-icons/hi2";

@@ -14,12 +14,12 @@ import React, {RefObject, useEffect, useRef, useState} from "react";
 import {createColumnHelper} from "@tanstack/table-core";
 import Image from "next/image";
 import Xarrow, {xarrowPropsType} from "react-xarrows";
-import Pokemon from "@/data/Pokemon";
-import EvolutionChain from "@/data/EvolutionChain";
-import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
+import Pokemon from "@/types/Pokemon";
+import EvolutionChain from "@/types/EvolutionChain";
+import EvolutionChain, {EvolvesTo} from "@/types/EvolutionChain";
 import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
-import User from "@/data/User";
+import User from "@/types/User";
 
 type EncounterRow = {
     method: string;

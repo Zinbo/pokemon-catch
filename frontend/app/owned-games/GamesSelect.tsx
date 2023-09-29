@@ -1,8 +1,8 @@
 'use client'
 
-import Game from "@/data/Game";
+import Game from "@/types/Game";
 import useSWR from "swr";
-import User from "@/data/User";
+import User from "@/types/User";
 import {
     Button,
     Card,

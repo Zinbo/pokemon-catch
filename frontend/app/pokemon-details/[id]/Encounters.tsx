@@ -3,10 +3,10 @@
 import {Box, Card, CardBody, CardHeader, Checkbox, Heading} from "@chakra-ui/react";
 import React, {useEffect, useState} from "react";
 import {createColumnHelper} from "@tanstack/table-core";
-import Pokemon, {Encounter} from "@/data/Pokemon";
-import Game from "@/data/Game";
+import Pokemon, {Encounter} from "@/types/Pokemon";
+import Game from "@/types/Game";
 import CustomTable from "@/components/CustomTable";
-import User from "@/data/User";
+import User from "@/types/User";
 import {encounterIsAvailable} from "@/lib/PokemonService";
 
 type EncounterRow = {

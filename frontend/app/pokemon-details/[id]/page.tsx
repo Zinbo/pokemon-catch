@@ -1,6 +1,6 @@
 import React from "react";
-import Pokemon from "@/data/Pokemon";
-import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
+import Pokemon from "@/types/Pokemon";
+import EvolutionChain, {EvolvesTo} from "@/types/EvolutionChain";
 import Parent from "@/app/pokemon-details/[id]/Parent";
 import games from "@/data/games.json"
 

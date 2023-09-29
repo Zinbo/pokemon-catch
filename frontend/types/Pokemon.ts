@@ -1,4 +1,4 @@
-import EvolutionChain from "@/data/EvolutionChain";
+import EvolutionChain from "@/types/EvolutionChain";
 
 export interface Location {
     name: string

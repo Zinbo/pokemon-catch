@@ -14,7 +14,7 @@ import {BsFilter} from "react-icons/bs";
 import {Property} from "csstype";
 import Filter = Property.Filter;
 import Filters from "@/app/Filters";
-import Game from "@/data/Game";
+import Game from "@/types/Game";
 
 export default function Search({filters, setFilters, searchTerm, setSearchTerm, games, selectedGame, setSelectedGame} :
 {filters: Filters, setFilters: (filter: Filters) => void, searchTerm: string, setSearchTerm: (term: string) => void, games: Game[], selectedGame: Game|null, setSelectedGame: (game: Game) => void}) {

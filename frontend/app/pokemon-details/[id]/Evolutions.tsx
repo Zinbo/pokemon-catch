@@ -2,9 +2,9 @@
 
 import {Card, CardBody, CardHeader, Flex, Heading} from "@chakra-ui/react";
 import React from "react";
-import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
+import EvolutionChain, {EvolvesTo} from "@/types/EvolutionChain";
 import CriteriaArrow from "@/app/pokemon-details/[id]/CriteriaArrow";
-import {PokemonWithMeta} from "@/data/Pokemon";
+import {PokemonWithMeta} from "@/types/Pokemon";
 import PokemonImage from "@/app/PokemonImage";
 
 interface ColumnsPair {

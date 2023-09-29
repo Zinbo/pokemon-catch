@@ -1,10 +1,10 @@
 'use client'
 import {Box, Grid, Text} from "@chakra-ui/react";
 import PokemonGridItem from "@/app/PokemonGridItem";
-import User from "@/data/User";
-import Pokemon, {PokemonWithMeta} from "@/data/Pokemon";
-import Game from "@/data/Game";
-import EvolutionChain from "@/data/EvolutionChain";
+import User from "@/types/User";
+import Pokemon, {PokemonWithMeta} from "@/types/Pokemon";
+import Game from "@/types/Game";
+import EvolutionChain from "@/types/EvolutionChain";
 import {calculateMetaDataForAllPokemon} from "@/lib/PokemonService";
 import Filters from "@/app/Filters";
 import React, {useEffect, useState} from "react";

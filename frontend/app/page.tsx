@@ -1,8 +1,8 @@
 import {Flex} from "@chakra-ui/react";
 import PokemonGrid from "@/app/PokemonGrid";
 import React from "react";
-import Pokemon from "@/data/Pokemon";
-import EvolutionChain from "@/data/EvolutionChain";
+import Pokemon from "@/types/Pokemon";
+import EvolutionChain from "@/types/EvolutionChain";
 import games from "@/data/games.json"
 
 async function getData(path: string) {

@@ -1,5 +1,5 @@
-import Game from "@/data/Game";
-import Pokemon from "@/data/Pokemon";
+import Game from "@/types/Game";
+import Pokemon from "@/types/Pokemon";
 
 export default interface User {
     id: string

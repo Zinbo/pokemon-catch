@@ -1,7 +1,7 @@
-import Pokemon, {Encounter, PokemonWithMeta} from "@/data/Pokemon";
-import User from "@/data/User";
-import EvolutionChain, {EvolvesTo} from "@/data/EvolutionChain";
-import Game from "@/data/Game";
+import Pokemon, {Encounter, PokemonWithMeta} from "@/types/Pokemon";
+import User from "@/types/User";
+import EvolutionChain, {EvolvesTo} from "@/types/EvolutionChain";
+import Game from "@/types/Game";
 
 export function userOwnsPokemon(pokedexNumber: number, user: User) {
     return !!user.ownedPokemon.find(o => o.pokedexNumber === pokedexNumber);
