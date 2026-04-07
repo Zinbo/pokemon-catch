@@ -25,23 +25,25 @@ public class PokemonController {
     }
 
 
-    @PostMapping(value = "/initialise", params = {"start", "end"})
+    @PostMapping(value = "/initialise-all-data", params = {"start", "end"})
     public void initialisePokemonV2(@RequestParam int start, @RequestParam int end){
         log.info("Populating pokemon and evolution chains...");
-        populateDbWithPokeData.populatePokemonV2Batch(start, end);
+        populateDbWithPokeData.populateAllData(start, end);
         log.info("Populated pokemon and evolution chains.");
     }
 
-
-
     @PostMapping("/import-caught-pokemon")
     public void importCaughtPokemon(@RequestBody List<String> caughtPokemon) {
+        log.info("Importing {} caught pokemon...", caughtPokemon.size());
         importCaughtPokemon.importPokemon(caughtPokemon);
     }
 
     @GetMapping()
     public Iterable<Pokemon> getPokemon() {
-        return pokemonRepository.findAll();
+        log.info("Getting pokemon...");
+        List<Pokemon> pokemon = pokemonRepository.findAll();
+        log.info("Found {} pokemon", pokemon.size());
+        return pokemon;
     }
 
     @GetMapping("/{id}")

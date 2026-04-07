@@ -14,11 +14,9 @@ import org.springframework.web.bind.annotation.*;
 public class EvolutionChainController {
 
     private final EvolutionChainV2Repository evolutionChainRepository;
-    private final PopulateDbWithPokeData populateDbWithPokeData;
 
-    public EvolutionChainController(EvolutionChainV2Repository evolutionChainRepository, PopulateDbWithPokeData populateDbWithPokeData) {
+    public EvolutionChainController(EvolutionChainV2Repository evolutionChainRepository) {
         this.evolutionChainRepository = evolutionChainRepository;
-        this.populateDbWithPokeData = populateDbWithPokeData;
     }
 
     @GetMapping
@@ -31,20 +29,5 @@ public class EvolutionChainController {
         return evolutionChainRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping(value = "/reinitialise-evolutionsv2", params = {"start", "end"})
-    public void reinitialiseEvolutionsV2(@RequestParam int start, @RequestParam int end) {
-        populateDbWithPokeData.initialiseEvolutionChainsV2(start, end);
-    }
-
-    @PostMapping(value = "/reinitialise-pokemon-names", params = {"start", "end"})
-    public void reinitialisePokemonNames(@RequestParam int start, @RequestParam int end) {
-        populateDbWithPokeData.initialisePokemonNamesInEvoChains(start, end);
-    }
-
-    @PostMapping(value = "/add-alolan-chains")
-    public void addAlolanChains() throws JsonProcessingException {
-        populateDbWithPokeData.addAlolanChains();
     }
 }

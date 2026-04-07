@@ -6,7 +6,6 @@ import com.stacktobasics.pokemoncatchbackend.domain.GameRepository;
 import com.stacktobasics.pokemoncatchbackend.domain.PokemonRepository;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.Baby;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChain;
-import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionChainRepository;
 import com.stacktobasics.pokemoncatchbackend.domain.evolution.EvolutionCriteria;
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2;
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2Repository;
@@ -20,6 +19,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -43,18 +43,16 @@ public class PopulateDbWithPokeData {
     private final PokeApiClient client;
     private final GameRepository gameRepository;
     private final PokemonRepository pokemonRepository;
-    private final EvolutionChainRepository evolutionChainRepository;
     private final EvolutionChainV2Repository evolutionChainV2Repository;
     private final Pattern idFromUrl = Pattern.compile("[^v](\\d+)");
 
     private final ObjectMapper objectMapper;
 
     public PopulateDbWithPokeData(PokeApiClient client, GameRepository gameRepository,
-                                  PokemonRepository pokemonRepository, EvolutionChainRepository evolutionChainRepository, EvolutionChainV2Repository evolutionChainV2Repository, ObjectMapper objectMapper) {
+                                  PokemonRepository pokemonRepository, EvolutionChainV2Repository evolutionChainV2Repository, ObjectMapper objectMapper) {
         this.client = client;
         this.gameRepository = gameRepository;
         this.pokemonRepository = pokemonRepository;
-        this.evolutionChainRepository = evolutionChainRepository;
         this.evolutionChainV2Repository = evolutionChainV2Repository;
         this.objectMapper = objectMapper;
     }
@@ -75,10 +73,44 @@ public class PopulateDbWithPokeData {
                 });
     }
 
-    public void populatePokemonV2Batch(int start, int end) {
+    public void populateAllData(Integer start, Integer end) {
+        log.info("Initialising all data...");
         Map<Integer, Integer> generations = getGenerations();
 
-        for (int i = start; i <= end; i++) {
+        var s = Optional.ofNullable(start).orElse(1);
+        var e = Optional.ofNullable(end).orElse(Integer.MAX_VALUE);
+
+        log.info("Initialising pokemon data...");
+        for (int i = s; i <= e; i++) {
+            if(!savePokemonDataForIndex(i, generations)) {
+                log.info("Found 404 for pokemon with ID {}, stopping now.", i);
+                break;
+            }
+        }
+        log.info("Pokemon data initialised");
+
+
+        log.info("Setting up proper names in Evo chains...");
+        initialisePokemonNamesInEvoChains();
+        log.info("Names set in evo chains.");
+
+        log.info("Adding Alolan chains...");
+        addAlolanChains();
+        log.info("Alolan chains added.");
+
+        log.info("Initialising games...");
+        populateGames();
+        log.info("Games populated.");
+        log.info("All data initialised.");
+    }
+
+    private boolean savePokemonDataForIndex(int i, Map<Integer, Integer> generations) {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        try {
             PokemonDTO dto = client.getPokemon(i);
             var species = client.getPokemonSpecies(i);
             var name = species.names.stream().filter(n -> n.language.name.equals("en")).map(n -> n.name).findFirst().orElse(species.name);
@@ -122,17 +154,22 @@ public class PopulateDbWithPokeData {
             log.info("Saving pokemon [{}]", i);
             pokemonRepository.save(pokemon);
 
-            if (!evolutionChainRepository.existsById(evolutionChainId)) {
+            if (!evolutionChainV2Repository.existsById(evolutionChainId)) {
                 log.info("Saving evolution chain [{}]", evolutionChainId);
                 var evolutionDTO = client.getEvolutionChain(evolutionChainId);
-                var evolutionChain = getEvolutionChain(evolutionDTO);
-                evolutionChainRepository.save(evolutionChain);
+                var evolutionChain = getEvolutionChainV2(evolutionDTO);
+                setNameForEvo(evolutionChain.getChain());
+                evolutionChainV2Repository.save(evolutionChain);
             }
+        } catch(HttpClientErrorException e) {
+            if(e.getStatusCode().value() == 404) return false;
         }
+        return true;
     }
 
-    public void initialisePokemonNamesInEvoChains(int start, int end) {
-        for (int i = start; i <= end; i++) {
+    private void initialisePokemonNamesInEvoChains() {
+        var noOfRecords = evolutionChainV2Repository.count();
+        for (int i = 0; i < noOfRecords; i++) {
             var evoChain = evolutionChainV2Repository.findById(i);
             var index = i;
             evoChain.ifPresentOrElse(e -> {
@@ -141,6 +178,7 @@ public class PopulateDbWithPokeData {
                 log.info("Saving evolution chain [{}]", index);
             }, () -> log.error("Could not find evo chain with id [{}], ignoring this one", index));
         }
+
     }
 
     private void setNameForEvo(EvolvesTo evolvesTo) {
@@ -149,21 +187,6 @@ public class PopulateDbWithPokeData {
             evolvesTo.setName(properName);
             evolvesTo.getEvolvesTo().forEach(this::setNameForEvo);
         }, () -> log.error("Could not find pokemon with id [{}], ignoring this one", evolvesTo.getPokedexNumber()));
-    }
-
-    public void initialiseEvolutionChainsV2(int start, int end) {
-        for (int i = start; i <= end; i++) {
-
-            try {
-                log.info("Saving evolution chain [{}]", i);
-                var evolutionDTO = client.getEvolutionChain(i);
-                var chain = getEvolutionChainV2(evolutionDTO);
-                evolutionChainV2Repository.save(chain);
-            } catch (HttpClientErrorException e) {
-                if (e.getStatusCode().value() != 404) throw e;
-            }
-        }
-        log.info("Finished saving all evolution chains");
     }
 
     private Map<Integer, Integer> getGenerations() {
@@ -310,7 +333,7 @@ public class PopulateDbWithPokeData {
         }
     }
 
-    public void addAlolanChains() throws JsonProcessingException {
+    public void addAlolanChains() {
 
         var allAlolanPokemon = new int[]{
                 20,
@@ -335,7 +358,12 @@ public class PopulateDbWithPokeData {
                 continue;
             }
 
-            var alolanChain = objectMapper.readValue(objectMapper.writeValueAsString(ogChain), EvolvesTo.class);
+            EvolvesTo alolanChain;
+            try {
+                alolanChain = objectMapper.readValue(objectMapper.writeValueAsString(ogChain), EvolvesTo.class);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
 
             ogChain.getEvolvesTo().get(0).getWaysToEvolve().remove(1);
             alolanChain.getEvolvesTo().get(0).getWaysToEvolve().remove(0);

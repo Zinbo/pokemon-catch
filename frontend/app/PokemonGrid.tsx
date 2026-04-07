@@ -27,8 +27,8 @@ const getUser = async () => {
     return await response.json();
 }
 
-
 export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
+
     const [filters, setFilters] = useState<Filters>({
         hideOwned: false,
         hideUncatchable: false,
