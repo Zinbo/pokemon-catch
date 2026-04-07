@@ -6,7 +6,7 @@ import EvolutionChain from "@/types/EvolutionChain";
 import games from "@/data/games.json"
 
 async function getData(path: string) {
-    const res = await fetch(`http://localhost:8080/${path}`)
+    const res = await fetch(`http://localhost:8080/${path}`, { cache: 'no-store' })
     if (!res.ok) {
         // This will activate the closest `error.js` Error Boundary
         throw new Error('Failed to fetch data')
@@ -26,6 +26,7 @@ async function getEvolutionChains() : Promise<EvolutionChain[]> {
 export default async function Home() {
     const evolutionChains = await getEvolutionChains();
     const pokemon = (await getPokemon()).sort((a, b) => a.pokedexNumber - b.pokedexNumber);
+    console.log(`Found ${pokemon.length} pokemon`)
 
     return(
         <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>
