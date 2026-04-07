@@ -27,6 +27,7 @@ import {
     calculateMetaDataForAllPokemon,
     canBeBred,
     canCatch,
+    canCatchThenBreed,
     userOwnsPokemon
 } from "@/lib/PokemonService";
 import Pokemon from "@/types/Pokemon";
@@ -35,6 +36,7 @@ import Encounters from "@/app/pokemon-details/[id]/Encounters";
 import EvolutionChain from "@/types/EvolutionChain";
 import useSWR from "swr";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
+import CatchAndBreed from "@/app/pokemon-details/[id]/CatchAndBreed";
 import Evolutions from "@/app/pokemon-details/[id]/Evolutions";
 import TypeColours from "@/types/Types";
 
@@ -102,6 +104,9 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
 
         if (canBeBred(evolutionChain, user)) badges.push(<Badge colorScheme='green'>Can breed</Badge>)
         else badges.push(<Badge colorScheme='gray'>Can't breed</Badge>)
+
+        if (!canCatch(pokemon, user?.ownedGames) && !canBeBred(evolutionChain, user) && canCatchThenBreed(pokemon, evolutionChain, allPokemonInChain, user))
+            badges.push(<Badge colorScheme='blue'>Can catch Other &amp; breed</Badge>)
 
         return (
             <Stack direction='row'>
@@ -190,6 +195,11 @@ export default function Parent({pokemon, evolutionChain, games, allPokemonInChai
                     <Box>
                         <Breeding user={user} pokemon={pokemon} evolutionChain={evolutionChain}
                                   allPokemonInChain={allPokemonWithMetaInChain}/>
+                    </Box>
+
+                    <Box>
+                        <CatchAndBreed user={user} pokemon={pokemon} evolutionChain={evolutionChain}
+                                       allPokemonInChain={allPokemonWithMetaInChain}/>
                     </Box>
                     <Flex justifyContent={"space-between"}>
                         {pokemon.pokedexNumber > 1 &&

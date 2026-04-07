@@ -117,6 +117,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
                             return <PokemonGridItem key={p.pokedexNumber} pokedexNumber={p.pokedexNumber} name={p.name}
                                                     isOwned={p.owned} canBeAcquired={p.catchable}
                                                     canBeBred={p.breedable}
+                                                    catchAndBreed={p.catchAndBreed}
                                                     hasBestCatchRate={hasBestEncounterInGame(p)}
                                                     visible={isVisible(p)}
                                                     toggleCatchStatus={toggleCatchStatus}/>;

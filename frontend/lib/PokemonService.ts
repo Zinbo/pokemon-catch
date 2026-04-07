@@ -62,28 +62,60 @@ export function notOwnedAndCanBeBred(pokemon : Pokemon, evolutionChain: Evolutio
     return canBeBred(evolutionChain, user);
 }
 
-export function calculateMetaDataForPokemon(pokemon: Pokemon, evolutionChain: EvolutionChain, user: User | null | undefined): PokemonWithMeta {
+function nodeLeadsToTarget(node: EvolvesTo, targetPokedex: number): boolean {
+    if (node.pokedexNumber === targetPokedex) return true;
+    return node.evolvesTo.some(child => nodeLeadsToTarget(child, targetPokedex));
+}
+
+function findCatchableAncestor(node: EvolvesTo, targetPokedex: number, allPokemon: Pokemon[], ownedGames: Game[]): EvolvesTo | null {
+    if (node.pokedexNumber === targetPokedex) return null;
+    if (!nodeLeadsToTarget(node, targetPokedex)) return null;
+    const pokemonData = allPokemon.find(p => p.pokedexNumber === node.pokedexNumber);
+    if (pokemonData && canCatch(pokemonData, ownedGames)) return node;
+    for (const child of node.evolvesTo) {
+        const result = findCatchableAncestor(child, targetPokedex, allPokemon, ownedGames);
+        if (result) return result;
+    }
+    return null;
+}
+
+export function findCatchableAncestorInChain(evolutionChain: EvolutionChain, targetPokedex: number, allPokemon: Pokemon[], ownedGames: Game[]): EvolvesTo | null {
+    return findCatchableAncestor(evolutionChain.chain, targetPokedex, allPokemon, ownedGames);
+}
+
+export function canCatchThenBreed(pokemon: Pokemon, evolutionChain: EvolutionChain, allPokemon: Pokemon[], user: User): boolean {
+    if (userOwnsPokemon(pokemon.pokedexNumber, user)) return false;
+    if (canBeAcquired(pokemon, evolutionChain, user)) return false;
+    return findCatchableAncestorInChain(evolutionChain, pokemon.pokedexNumber, allPokemon, user.ownedGames) !== null;
+}
+
+export function calculateMetaDataForPokemon(pokemon: Pokemon, evolutionChain: EvolutionChain, user: User | null | undefined, allPokemon?: Pokemon[]): PokemonWithMeta {
     if (!user) return {
         ...pokemon,
         owned: true,
         catchable: true,
         breedable: false,
+        catchAndBreed: false,
     }
 
     const owned = userOwnsPokemon(pokemon.pokedexNumber, user);
     const catchable = canBeAcquired(pokemon, evolutionChain, user);
     const breedable = notOwnedAndCanBeBred(pokemon, evolutionChain, user);
+    const catchAndBreed = (!owned && !catchable && !!allPokemon)
+        ? canCatchThenBreed(pokemon, evolutionChain, allPokemon, user)
+        : false;
     return {
         ...pokemon,
         owned,
         catchable,
         breedable,
+        catchAndBreed,
     };
 }
 
 export function calculateMetaDataForAllPokemon(pokemon: Pokemon[], evolutionChains: EvolutionChain[], user: User | null | undefined) {
     return pokemon.map((p) => {
         const evolutionChain = (evolutionChains.find(e => e.id === p.evolutionChainId) as EvolutionChain);
-        return calculateMetaDataForPokemon(p, evolutionChain, user);
+        return calculateMetaDataForPokemon(p, evolutionChain, user, pokemon);
     });
 }

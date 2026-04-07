@@ -31,4 +31,5 @@ export interface PokemonWithMeta extends Pokemon {
     owned: boolean
     catchable: boolean
     breedable: boolean
+    catchAndBreed: boolean
 }

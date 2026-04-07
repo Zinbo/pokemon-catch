@@ -9,6 +9,7 @@ interface Props {
     isOwned: boolean,
     canBeAcquired: boolean,
     canBeBred?: boolean,
+    catchAndBreed?: boolean,
     hasBestCatchRate?: boolean
     alolan ?: boolean
     galarian ?: boolean
@@ -26,11 +27,11 @@ const pokemonFont = localFont({
     ],
     variable: '--font-pokemon'
 })
-export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquired, canBeBred, hasBestCatchRate, alolan, galarian}: Props) {
+export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquired, canBeBred, catchAndBreed, hasBestCatchRate, alolan, galarian}: Props) {
 
     const getStyle = () => {
         if (isOwned) return {};
-        if (canBeAcquired) return NOT_CAUGHT;
+        if (canBeAcquired || catchAndBreed) return NOT_CAUGHT;
         return {...NOT_CAUGHT, ...CANNOT_CATCH}
     }
 
@@ -43,6 +44,21 @@ export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquire
                        top: 0,
                        right: 0
                    }}/>
+        );
+    }
+
+    const CatchAndBreedIcon = () => {
+        if (!catchAndBreed) return <></>;
+        return (
+            <div style={{position: "absolute", top: 0, right: 0, display: "flex", alignItems: "center"}}>
+                <svg width="16" height="16" viewBox="0 0 100 100" aria-label="catch and breed">
+                    <circle cx="50" cy="50" r="47" fill="white" stroke="#333" strokeWidth="5"/>
+                    <path d="M 3 50 A 47 47 0 0 1 97 50" fill="#e53e3e"/>
+                    <line x1="3" y1="50" x2="97" y2="50" stroke="#333" strokeWidth="7"/>
+                    <circle cx="50" cy="50" r="13" fill="white" stroke="#333" strokeWidth="5"/>
+                </svg>
+                <Image src="/images/list/egg-cropped.png" alt={"egg"} width={16} height={16}/>
+            </div>
         );
     }
 
@@ -63,6 +79,7 @@ export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquire
                 <Image src={`/images/list/${imageName}.png`} width="96" height="96" alt={`i+1`}
                        style={{...getStyle(), display: "block"}}/>
                 <Egg/>
+                <CatchAndBreedIcon/>
                 <Star/>
             </div>
             <Text className={pokemonFont.className} fontSize='xs'>{name}</Text>

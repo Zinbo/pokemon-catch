@@ -10,13 +10,14 @@ interface Props {
     isOwned: boolean,
     canBeAcquired: boolean,
     canBeBred: boolean,
+    catchAndBreed: boolean,
     visible: boolean,
     toggleCatchStatus: (pokedexNumber: number, isOwned: boolean) => void,
     hasBestCatchRate: boolean
 }
 
 const PokemonGridItem = memo(function PokemonGridItem(
-    {pokedexNumber, name, isOwned, canBeAcquired, canBeBred, visible, toggleCatchStatus, hasBestCatchRate}: Props) {
+    {pokedexNumber, name, isOwned, canBeAcquired, canBeBred, catchAndBreed, visible, toggleCatchStatus, hasBestCatchRate}: Props) {
     const router = useRouter();
 
     const GreyOutCard = useMemo(() => {
@@ -26,7 +27,7 @@ const PokemonGridItem = memo(function PokemonGridItem(
                       position={"relative"} className='pokemon-grid-item-transparent'>
                     <Flex id="front" flex={1} justifyContent={"center"} direction={"column"} alignItems={"center"}
                           position={"relative"} className='pokemon-grid-item-transparent--off'>
-                        <PokemonImage pokedexNumber={pokedexNumber} name={name} isOwned={isOwned} canBeAcquired={canBeAcquired} canBeBred={canBeBred} hasBestCatchRate={hasBestCatchRate}/>
+                        <PokemonImage pokedexNumber={pokedexNumber} name={name} isOwned={isOwned} canBeAcquired={canBeAcquired} canBeBred={canBeBred} catchAndBreed={catchAndBreed} hasBestCatchRate={hasBestCatchRate}/>
                     </Flex>
                     <Flex position={"absolute"} className='pokemon-grid-item-transparent--on' style={{width: '100%'}}
                           justifyContent={"space-evenly"}>
@@ -43,7 +44,7 @@ const PokemonGridItem = memo(function PokemonGridItem(
                 </Flex>
             </>
         )
-    }, [isOwned, canBeAcquired, canBeBred, hasBestCatchRate])
+    }, [isOwned, canBeAcquired, canBeBred, catchAndBreed, hasBestCatchRate])
 
     return (
         <GridItem id="card" border='1px' borderColor='gray.200' backgroundColor={"white"}
