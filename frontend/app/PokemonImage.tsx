@@ -50,12 +50,16 @@ export default function PokemonImage({pokedexNumber, name, isOwned, canBeAcquire
     const CatchAndBreedIcon = () => {
         if (!catchAndBreed) return <></>;
         return (
-            <div style={{position: "absolute", top: 0, right: 0, display: "flex", alignItems: "center"}}>
-                <svg width="16" height="16" viewBox="0 0 100 100" aria-label="catch and breed">
+            <div style={{position: "absolute", top: 0, right: 0, display: "flex", alignItems: "center", gap: "2px"}}>
+                <svg width="16" height="16" viewBox="0 0 100 100" aria-label="pokeball">
                     <circle cx="50" cy="50" r="47" fill="white" stroke="#333" strokeWidth="5"/>
                     <path d="M 3 50 A 47 47 0 0 1 97 50" fill="#e53e3e"/>
                     <line x1="3" y1="50" x2="97" y2="50" stroke="#333" strokeWidth="7"/>
                     <circle cx="50" cy="50" r="13" fill="white" stroke="#333" strokeWidth="5"/>
+                </svg>
+                <svg width="16" height="16" viewBox="0 0 24 10" aria-hidden="true">
+                    <line x1="0" y1="5" x2="20" y2="5" stroke="#333" strokeWidth="2"/>
+                    <polyline points="14,1 20,5 14,9" fill="none" stroke="#333" strokeWidth="2"/>
                 </svg>
                 <Image src="/images/list/egg-cropped.png" alt={"egg"} width={16} height={16}/>
             </div>
