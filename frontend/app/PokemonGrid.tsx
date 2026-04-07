@@ -29,15 +29,29 @@ const getUser = async () => {
 
 export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
 
-    const [filters, setFilters] = useState<Filters>({
-        hideOwned: false,
-        hideUncatchable: false,
-        onlyShowBreedable: false,
-        onlyShowBestEncounters: false
+    const [filters, setFilters] = useState<Filters>(() => {
+        try {
+            const saved = localStorage.getItem('pokemon-filters');
+            return saved ? JSON.parse(saved) : {
+                hideOwned: false,
+                hideUncatchable: false,
+                onlyShowBreedable: false,
+                onlyShowBestEncounters: false
+            };
+        } catch {
+            return {hideOwned: false, hideUncatchable: false, onlyShowBreedable: false, onlyShowBestEncounters: false};
+        }
     });
     const [user, setUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+    const [selectedGame, setSelectedGame] = useState<Game | null>(() => {
+        try {
+            const savedId = localStorage.getItem('pokemon-selected-game');
+            return savedId ? games.find(g => g.id === parseInt(savedId)) ?? null : null;
+        } catch {
+            return null;
+        }
+    });
 
     const toggleCatchStatus = async (pokedexNumber: number, isOwned: boolean) => {
         const url = `users/123/pokemon/${pokedexNumber}`;
@@ -51,6 +65,18 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
         }
         getData();
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem('pokemon-filters', JSON.stringify(filters));
+    }, [filters]);
+
+    useEffect(() => {
+        if (selectedGame) {
+            localStorage.setItem('pokemon-selected-game', String(selectedGame.id));
+        } else {
+            localStorage.removeItem('pokemon-selected-game');
+        }
+    }, [selectedGame]);
 
     const calculatedPokemon: PokemonWithMeta[] = calculateMetaDataForAllPokemon(pokemon, evolutionChains, user);
 
