@@ -10,6 +10,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(of = "id")
+@ToString
 public class Game implements AggregateRoot {
 
     public static final List<Integer> UNUSED_GAMES = List.of(19, 20);

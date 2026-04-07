@@ -23,14 +23,14 @@ public class UserController {
     }
 
     @PostMapping("/{id}/games")
-    public ResponseEntity<User> saveGames(@PathVariable String id, @RequestBody List<String> games) {
+    public ResponseEntity<User> saveGames(@PathVariable String id, @RequestBody List<Integer> games) {
         // TODO: Set up users properly
         log.info("Adding the games [{}] for user [{}]", games, id);
         if(userRepository.findAll().isEmpty()) userRepository.save(new User());
 
         User user = userRepository.findAll().get(0);
         user.replaceGames(games, gameRepository);
-        log.info("User after replacing games: [{}]", user);
+        log.info("User's games after replacing: [{}]", user.getOwnedGames());
         userRepository.save(user);
         return ResponseEntity.ok(user);
     }

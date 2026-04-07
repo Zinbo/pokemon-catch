@@ -25,10 +25,10 @@ public class User {
     Set<Game> ownedGames = new HashSet<>();
     Set<OwnedPokemon> ownedPokemon = new HashSet<>();
 
-    public void replaceGames(@NonNull List<String> gameNames, @NonNull GameRepository gameRepository) {
+    public void replaceGames(@NonNull List<Integer> gamesToAdd, @NonNull GameRepository gameRepository) {
         List<Game> savedGames = gameRepository.findAll();
-        ownedGames = gameNames.stream().flatMap(gameName -> {
-            Optional<Game> matchedGame = savedGames.stream().filter(savedGame -> savedGame.getName().equals(gameName)).findFirst();
+        ownedGames = gamesToAdd.stream().flatMap(id -> {
+            Optional<Game> matchedGame = savedGames.stream().filter(savedGame -> savedGame.getId() == id).findFirst();
             return matchedGame.stream();
         }).collect(Collectors.toSet());
     }

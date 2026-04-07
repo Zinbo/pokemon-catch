@@ -32,7 +32,7 @@ import {InfoIcon} from "@chakra-ui/icons";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-const ROMAN_NUMERALS = ["I (Nintendo 3DS Virtual Console)", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX"];
+const ROMAN_NUMERALS = ["I (Nintendo 3DS Virtual Console)", "II  (Nintendo 3DS Virtual Console)", "III", "VI", "V", "VI", "VII", "VIII", "IX"];
 
 const difficultTooltipOlderGen = (
     <Tooltip
@@ -95,7 +95,7 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(selectedGames.map(g => g.name))
+            body: JSON.stringify(selectedGames.map(g => g.id))
         });
         router.push('/');
     }
@@ -144,7 +144,7 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
                         <Card>
                             <CardHeader>
                                 <Heading
-                                    size='md'>Generation {value} {((index === 1 || index == 2) && difficultTooltipOlderGen) || (index === 3 && difficultTooltip)}</Heading>
+                                    size='md'>Generation {value} {((index == 2) && difficultTooltipOlderGen) || (index === 3 && difficultTooltip)}</Heading>
                             </CardHeader>
                             <CardBody>
                                 <Stack spacing={2}>
