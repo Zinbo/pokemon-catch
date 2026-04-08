@@ -6,7 +6,7 @@ export default async function OwnedGamesPage() {
     return (
         <Flex direction={"column"} style={{paddingTop: "20px", paddingBottom: "20px"}}>
             <Heading>Select Owned Games</Heading>
-            <GamesSelect allGames={allGames}/>
+            <GamesSelect generations={allGames}/>
         </Flex>
 
     )

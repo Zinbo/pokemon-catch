@@ -1,14 +1,15 @@
 'use client'
 
 import Game from "@/types/Game";
-import useSWR from "swr";
-import User from "@/types/User";
+import useSWR, {mutate} from "swr";
+import User, {BankAccess} from "@/types/User";
 import {
     Button,
     Card,
     CardBody,
     CardHeader,
     Checkbox,
+    Flex,
     FormControl,
     FormHelperText,
     FormLabel,
@@ -31,11 +32,8 @@ import {
 import React, {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import {InfoIcon} from "@chakra-ui/icons";
-import {PokemonBankAccess} from "@/types/User";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
-
-const ROMAN_NUMERALS = ["I (Nintendo 3DS Virtual Console)", "II  (Nintendo 3DS Virtual Console)", "III", "VI", "V", "VI", "VII", "VIII", "IX"];
 
 const difficultTooltipOlderGen = (
     <Tooltip
@@ -61,20 +59,45 @@ const difficultTooltip = (
         </div>}><InfoIcon/></Tooltip>
 )
 
-export default function GamesSelect({allGames}: { allGames: Game[] }) {
+interface Generation {
+    name: string
+    games: Game[]
+    requires ?: BankAccess
+    difficulty ?: Difficulty
+}
+
+enum Difficulty {
+    HARD = "HARD",
+    HARDEST = "HARDEST"
+}
+
+const calculateAvailableGenerations = (user: User, generations: Generation[]) => {
+    switch(user.pokemonBankAccess) {
+        case "NONE":
+            return generations.filter(g => !g.requires)
+        case "BANK":
+            return generations.filter(g => g.requires !== BankAccess.BANK_AND_TRANSPORTER)
+        default:
+            return generations
+    }
+}
+
+export default function GamesSelect({generations}: { generations: Generation[] }) {
     const router = useRouter();
     const {data: user, error} = useSWR<User, any>(`/users/123`, fetcher);
     const [selectedGames, setSelectedGames] = useState(user?.ownedGames ?? []);
-    const [pokemonBankAccess, setPokemonBankAccess] = useState<PokemonBankAccess>(user?.pokemonBankAccess ?? 'NONE');
     const [loading, setLoading] = useState(true);
     const {isOpen, onOpen, onClose} = useDisclosure();
+    const [pokemonBankAccess, setPokemonBankAccess] = useState<BankAccess>(user?.pokemonBankAccess ?? BankAccess.NONE);
+    const [availableGenerations, setAvailableGenerations] = useState(generations);
 
     useEffect(() => {
         if (!user) return;
-        onOpen();
+        if(!user.pokemonBankAccess) onOpen();
         setLoading(false);
         setSelectedGames(user.ownedGames);
-        setPokemonBankAccess(user.pokemonBankAccess ?? 'NONE');
+        if(user.pokemonBankAccess) setPokemonBankAccess(user.pokemonBankAccess);
+        setAvailableGenerations(calculateAvailableGenerations(user, generations));
     }, [user]);
 
     const toggleGame = (game: Game, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,11 +130,14 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
 
     const savePokemonBankAccess = async () => {
         await fetch(`/users/123/pokemon-bank-access/${pokemonBankAccess}`, {method: 'POST'});
+        await mutate(`/users/123`);
         onClose();
     }
 
+
     return <>
-        <Modal isOpen={isOpen} onClose={onClose}>
+        <Flex><Button onClick={onOpen}>Pokémon Bank Settings</Button></Flex>
+    <Modal isOpen={isOpen} onClose={onClose}>
             <ModalOverlay/>
             <ModalContent>
                 <ModalHeader>Pokémon Bank and Poké Transporter</ModalHeader>
@@ -123,18 +149,21 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
                         Poké Transporter apps.<br/>
                         This means that if you do not already own a 3DS with Pokémon Bank app (and the Poké Transporter
                         app for Gen 1 - 5)
-                        installed you cannot transfer pokemon from games that are not on the Nintendo Switch.
+                        installed you cannot transfer pokemon from games that are not on the Nintendo Switch. <br/>
+                        If you don't have these apps you can look into other means of acquiring them (such as described in this <a target="_blank" href={"https://www.youtube.com/watch?v=xeoDxF5Zp7A"} >video</a>), <b>but you do so at your own
+                        risk.<br/>
+                        I cannot take any responsibility for any issues you may have.</b>
                     </Text>
                     <br/>
                     <FormControl as='fieldset'>
                         <FormLabel as='legend'>
                             Please select whether you have access to these apps
                         </FormLabel>
-                        <RadioGroup value={pokemonBankAccess} onChange={(v) => setPokemonBankAccess(v as PokemonBankAccess)}>
+                        <RadioGroup value={pokemonBankAccess} onChange={(v) => setPokemonBankAccess(v as BankAccess)}>
                             <Stack direction='column'>
-                                <Radio value='NONE'>None</Radio>
-                                <Radio value='BANK'>Pokémon Bank</Radio>
-                                <Radio value='BANK_AND_TRANSPORTER'>Pokémon Bank and Poké Transporter</Radio>
+                                <Radio value={BankAccess.NONE}>None</Radio>
+                                <Radio value={BankAccess.BANK}>Pokémon Bank</Radio>
+                                <Radio value={BankAccess.BANK_AND_TRANSPORTER}>Pokémon Bank and Poké Transporter</Radio>
                             </Stack>
                         </RadioGroup>
                         <FormHelperText>Your answer will hide games that you cannot transfer pokemon from. You can
@@ -151,15 +180,15 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
         </Modal>
 
         <SimpleGrid columns={3} spacing={10}>
-            {ROMAN_NUMERALS.map((value, index) => (
+            {availableGenerations.map((generation) => (
                         <Card>
                             <CardHeader>
                                 <Heading
-                                    size='md'>Generation {value} {((index == 2) && difficultTooltipOlderGen) || (index === 3 && difficultTooltip)}</Heading>
+                                    size='md'>{generation.name} {((generation.difficulty === Difficulty.HARDEST) && difficultTooltipOlderGen) || (generation.difficulty === Difficulty.HARD && difficultTooltip)}</Heading>
                             </CardHeader>
                             <CardBody>
                                 <Stack spacing={2}>
-                                    {allGames.filter(game => game.generation === (index + 1)).map(game => (
+                                    {generation.games.map(game => (
                                         <Checkbox
                                             isDisabled={loading}
                                             isChecked={!!selectedGames?.find(selectedGames => selectedGames.id === game.id)}

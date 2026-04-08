@@ -70,6 +70,7 @@ public class UserController {
     @PostMapping("/{id}/pokemon-bank-access/{access}")
     public ResponseEntity<User> savePokemonBankAccess(@PathVariable String id, @PathVariable PokemonBankAccess access) {
         log.info("Saving pokemon bank access [{}] for user [{}]", access, id);
+        // TODO: Wipe out any games which can no longer be used due to bank access
         if(userRepository.findAll().isEmpty()) userRepository.save(new User());
 
         User user = userRepository.findAll().get(0);
