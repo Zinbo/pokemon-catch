@@ -20,7 +20,9 @@ import {
     ModalFooter,
     ModalHeader,
     ModalOverlay,
-    SimpleGrid, Skeleton,
+    Radio,
+    RadioGroup,
+    SimpleGrid,
     Stack,
     Text,
     Tooltip,
@@ -29,6 +31,7 @@ import {
 import React, {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import {InfoIcon} from "@chakra-ui/icons";
+import {PokemonBankAccess} from "@/types/User";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -62,6 +65,7 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
     const router = useRouter();
     const {data: user, error} = useSWR<User, any>(`/users/123`, fetcher);
     const [selectedGames, setSelectedGames] = useState(user?.ownedGames ?? []);
+    const [pokemonBankAccess, setPokemonBankAccess] = useState<PokemonBankAccess>(user?.pokemonBankAccess ?? 'NONE');
     const [loading, setLoading] = useState(true);
     const {isOpen, onOpen, onClose} = useDisclosure();
 
@@ -70,6 +74,7 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
         onOpen();
         setLoading(false);
         setSelectedGames(user.ownedGames);
+        setPokemonBankAccess(user.pokemonBankAccess ?? 'NONE');
     }, [user]);
 
     const toggleGame = (game: Game, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,11 +105,16 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
         router.push('/');
     }
 
+    const savePokemonBankAccess = async () => {
+        await fetch(`/users/123/pokemon-bank-access/${pokemonBankAccess}`, {method: 'POST'});
+        onClose();
+    }
+
     return <>
         <Modal isOpen={isOpen} onClose={onClose}>
             <ModalOverlay/>
             <ModalContent>
-                <ModalHeader>Pokémon Home and Poké Transporter</ModalHeader>
+                <ModalHeader>Pokémon Bank and Poké Transporter</ModalHeader>
                 <ModalCloseButton/>
                 <ModalBody>
                     <Text>
@@ -120,21 +130,22 @@ export default function GamesSelect({allGames}: { allGames: Game[] }) {
                         <FormLabel as='legend'>
                             Please select whether you have access to these apps
                         </FormLabel>
-                        <Checkbox>
-                            Pokémon Bank
-                        </Checkbox>
-                        <Checkbox>
-                            Pokémon Bank and Poké Transporter
-                        </Checkbox>
-                        <FormHelperText>Your answers will hide games that you cannot transfer pokemon from. You can
+                        <RadioGroup value={pokemonBankAccess} onChange={(v) => setPokemonBankAccess(v as PokemonBankAccess)}>
+                            <Stack direction='column'>
+                                <Radio value='NONE'>None</Radio>
+                                <Radio value='BANK'>Pokémon Bank</Radio>
+                                <Radio value='BANK_AND_TRANSPORTER'>Pokémon Bank and Poké Transporter</Radio>
+                            </Stack>
+                        </RadioGroup>
+                        <FormHelperText>Your answer will hide games that you cannot transfer pokemon from. You can
                             change this at any time in your settings.</FormHelperText>
                     </FormControl>
                 </ModalBody>
                 <ModalFooter>
-                    <Button colorScheme='blue' mr={3} onClick={onClose}>
+                    <Button colorScheme='blue' mr={3} onClick={savePokemonBankAccess}>
                         Save
                     </Button>
-                    <Button variant='ghost'>Close</Button>
+                    <Button variant='ghost' onClick={onClose}>Close</Button>
                 </ModalFooter>
             </ModalContent>
         </Modal>

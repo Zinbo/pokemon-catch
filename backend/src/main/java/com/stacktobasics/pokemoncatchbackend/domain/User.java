@@ -24,6 +24,7 @@ public class User {
     String id;
     Set<Game> ownedGames = new HashSet<>();
     Set<OwnedPokemon> ownedPokemon = new HashSet<>();
+    PokemonBankAccess pokemonBankAccess = PokemonBankAccess.NONE;
 
     public void replaceGames(@NonNull List<Integer> gamesToAdd, @NonNull GameRepository gameRepository) {
         List<Game> savedGames = gameRepository.findAll();

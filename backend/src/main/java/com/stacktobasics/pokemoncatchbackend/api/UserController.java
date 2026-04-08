@@ -67,4 +67,14 @@ public class UserController {
         return ResponseEntity.ok(userRepository.save(user));
     }
 
+    @PostMapping("/{id}/pokemon-bank-access/{access}")
+    public ResponseEntity<User> savePokemonBankAccess(@PathVariable String id, @PathVariable PokemonBankAccess access) {
+        log.info("Saving pokemon bank access [{}] for user [{}]", access, id);
+        if(userRepository.findAll().isEmpty()) userRepository.save(new User());
+
+        User user = userRepository.findAll().get(0);
+        user.setPokemonBankAccess(access);
+        return ResponseEntity.ok(userRepository.save(user));
+    }
+
 }
