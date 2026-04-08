@@ -35,11 +35,12 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
             return saved ? JSON.parse(saved) : {
                 hideOwned: false,
                 hideUncatchable: false,
-                onlyShowBreedable: false,
+                hideCatchable: false,
+                hideBreedable: false,
                 onlyShowBestEncounters: false
             };
         } catch {
-            return {hideOwned: false, hideUncatchable: false, onlyShowBreedable: false, onlyShowBestEncounters: false};
+            return {hideOwned: false, hideUncatchable: false, hideCatchable: false, hideBreedable: false, onlyShowBestEncounters: false};
         }
     });
     const [user, setUser] = useState<User | null>(null);
@@ -81,9 +82,12 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
     const calculatedPokemon: PokemonWithMeta[] = calculateMetaDataForAllPokemon(pokemon, evolutionChains, user);
 
     const isVisible = (p: PokemonWithMeta) => {
-        if (filters.hideOwned && p.owned) return false;
-        if (filters.hideUncatchable && !p.catchable) return false;
-        if (filters.onlyShowBreedable && !p.breedable) return false;
+        if (!filters.onlyShowBestEncounters) {
+            if (filters.hideOwned && p.owned) return false;
+            if (filters.hideUncatchable && !p.catchable && !p.catchAndBreed) return false;
+            if (filters.hideCatchable && (p.catchable || p.catchAndBreed)) return false;
+            if (filters.hideBreedable && p.breedable) return false;
+        }
         if (filters.onlyShowBestEncounters && !hasBestEncounterInGame(p)) return false;
         if (!!selectedGame && !p.encounterDetails.encounters.find(e => e.location.gameId === selectedGame.id)) return false;
 

@@ -56,5 +56,5 @@ export default async function Page({params}: {
     const evolutionChain = await getEvolutionChain(pokemon.evolutionChainId);
     const allPokemonInChain = await getAllPokemonInChain(evolutionChain);
 
-    return <Parent games={games} pokemon={pokemon} evolutionChain={evolutionChain} allPokemonInChain={allPokemonInChain}/>
+    return <Parent games={games.flatMap(g => g.games)} pokemon={pokemon} evolutionChain={evolutionChain} allPokemonInChain={allPokemonInChain}/>
 }

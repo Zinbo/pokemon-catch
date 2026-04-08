@@ -30,6 +30,6 @@ export default async function Home() {
 
     return(
         <Flex direction={"column"} rowGap={5} style={{paddingTop: "20px"}}>
-            <PokemonGrid pokemon={pokemon} games={games} evolutionChains={evolutionChains}/>
+            <PokemonGrid pokemon={pokemon} games={games.flatMap(g => g.games)} evolutionChains={evolutionChains}/>
         </Flex>)
 }
