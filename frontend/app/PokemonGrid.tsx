@@ -85,7 +85,7 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
         if (!filters.onlyShowBestEncounters) {
             if (filters.hideOwned && p.owned) return false;
             if (filters.hideUncatchable && !p.catchable && !p.catchAndBreed) return false;
-            if (filters.hideCatchable && (p.catchable || p.catchAndBreed)) return false;
+            if (filters.hideCatchable && (p.catchable || p.catchAndBreed) && !p.breedable) return false;
             if (filters.hideBreedable && p.breedable) return false;
         }
         if (filters.onlyShowBestEncounters && !hasBestEncounterInGame(p)) return false;
