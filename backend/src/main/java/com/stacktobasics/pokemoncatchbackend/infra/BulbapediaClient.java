@@ -16,6 +16,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Component
@@ -35,8 +37,8 @@ public class BulbapediaClient {
             "Sword", "Shield", "Expansion Pass", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus",
             "Scarlet", "Violet", "Legends: Z-A", "Mega Dimension");
 
-    private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event");
-    private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion");
+    private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event", "Unobtainable");
+    private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari");
 
     private static final int LIMIT = 1;
 
@@ -60,6 +62,7 @@ public class BulbapediaClient {
         }
         log.info("Found {} unique Pokemon pages to process", pokemonEntries.size());
 
+        List<Encounter> allEncounters = new ArrayList<>();
         for (int i = 0; i < pokemonEntries.size(); i++) {
             if(i == LIMIT) {
                 log.info("Stopping at LIMIT {}.", LIMIT);
@@ -72,6 +75,7 @@ public class BulbapediaClient {
                 if (!encounters.isEmpty()) {
                     encounterRepository.saveAll(encounters);
                     log.info("Saved {} encounters for {}", encounters.size(), entry.name());
+                    allEncounters.addAll(encounters);
                 }
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -82,6 +86,9 @@ public class BulbapediaClient {
                 log.error("Error processing {}: {}", entry.name(), e.getMessage());
             }
         }
+
+        log.info("All encounter text found:");
+        allEncounters.forEach(e -> log.info("[{}] {}: {}", e.getGame(), e.getPokemonName(), e.getCleanedUpEncounterText()));
     }
 
     // Fetches the national dex list HTML and extracts (dexNumber, pokemonName, pageTitle) for each unique Pokemon page.
@@ -211,10 +218,14 @@ public class BulbapediaClient {
             // Each <br> or comma in the cell separates a distinct encounter entry
             List<String[]> parts = splitByBrOrComma(contentCell);
 
+            // Pre-compute cleaned text for each part, passing location-type context forward
+            // so that bare numbers like "26" after "Routes 22" resolve to "Route 26"
+            String[] cleanedTexts = calculateCleanEncounterTexts(parts);
+
             for (String game : matchedGames) {
-                for (String[] part : parts) {
-                    String encounterHtml = part[0].trim();
-                    String encounterText = part[1].trim();
+                for (int i = 0; i < parts.size(); i++) {
+                    String encounterHtml = parts.get(i)[0].trim();
+                    String encounterText = parts.get(i)[1].trim();
                     if (encounterText.isBlank()) continue;
                     if(IGNORED_ENCOUNTERS.contains(encounterText) || IGNORED_ENCOUNTERS_STARTS_WITH.stream().anyMatch(encounterText::startsWith)) continue;
 
@@ -225,6 +236,7 @@ public class BulbapediaClient {
                     encounter.setGame(game);
                     encounter.setEncounterHtml(encounterHtml);
                     encounter.setEncounterText(encounterText);
+                    encounter.setCleanedUpEncounterText(cleanedTexts[i]);
                     encounters.add(encounter);
                 }
             }
@@ -233,9 +245,17 @@ public class BulbapediaClient {
         return encounters;
     }
 
-    // Try to match the game headers from a table row against the GAMES list.
-    // First try joining them all (e.g. "Red" + "Blue" → "Red, Blue") for paired entries,
-    // then fall back to matching each name individually.
+    private static String[] calculateCleanEncounterTexts(List<String[]> parts) {
+        String[] cleanedTexts = new String[parts.size()];
+        String previousLocationType = null;
+        for (int i = 0; i < parts.size(); i++) {
+            cleanedTexts[i] = computeCleanedEncounterText(parts.get(i)[1].trim(), previousLocationType);
+            String newType = extractLocationType(cleanedTexts[i]);
+            if (newType != null) previousLocationType = newType;
+        }
+        return cleanedTexts;
+    }
+
     private List<String> findMatchingGames(List<String> gameNames) {
         return gameNames.stream()
                 .filter(GAMES::contains)
@@ -284,6 +304,39 @@ public class BulbapediaClient {
         if (!t.isBlank()) {
             parts.add(new String[]{html.toString().trim(), t});
         }
+    }
+
+    // Produces a clean single location name from raw encounter text.
+    // previousLocationType carries the location prefix (e.g. "Route") forward so that bare
+    // numbers like "26" following "Routes 22" resolve to "Route 26".
+    private static String computeCleanedEncounterText(String rawText, String previousLocationType) {
+        String cleaned = rawText.trim();
+
+        // Strip leading "and " (e.g. " and 3" → "3")
+        if (cleaned.toLowerCase().startsWith("and ")) {
+            cleaned = cleaned.substring(4).trim();
+        }
+
+        // Singularize common location plurals
+        cleaned = cleaned.replaceAll("\\bRoutes\\b", "Route");
+        cleaned = cleaned.replaceAll("\\bCaves\\b", "Cave");
+        cleaned = cleaned.replaceAll("\\bTowns\\b", "Town");
+        cleaned = cleaned.replaceAll("\\bCities\\b", "City");
+
+        // If only a bare number remains, prefix with the previous location type
+        // (e.g. "26" after "Route 22" → "Route 26")
+        if (cleaned.matches("\\d+") && previousLocationType != null) {
+            cleaned = previousLocationType + " " + cleaned;
+        }
+
+        return cleaned;
+    }
+
+    // Extracts the location type prefix from a cleaned name so it can be passed as context.
+    // "Route 22" → "Route", "Kanto Route 22" → "Kanto Route", "Safari Zone" → null
+    private static String extractLocationType(String cleanedText) {
+        Matcher matcher = Pattern.compile("^(.+?)\\s+\\d+$").matcher(cleanedText.trim());
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     private record PokemonEntry(int dexNumber, String name, String pageTitle) {}
