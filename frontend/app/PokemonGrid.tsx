@@ -5,7 +5,7 @@ import User from "@/types/User";
 import Pokemon, {PokemonWithMeta} from "@/types/Pokemon";
 import Game from "@/types/Game";
 import EvolutionChain from "@/types/EvolutionChain";
-import {calculateMetaDataForAllPokemon} from "@/lib/PokemonService";
+import {calculateMetaDataForAllPokemon, isBestCatchRateInOwnedGames} from "@/lib/PokemonService";
 import Filters from "@/app/Filters";
 import React, {useEffect, useState} from "react";
 import Search from "@/app/Search";
@@ -97,9 +97,8 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
     }
 
     const hasBestEncounterInGame = (p: PokemonWithMeta) => {
-        if (!selectedGame) return false;
-        if (p.owned) return false;
-        return !!p.encounterDetails.encounters.find(e => e.location.gameId === selectedGame.id && p.encounterDetails.bestCatchRate === e.catchRate);
+        if (!selectedGame || !user || p.owned) return false;
+        return isBestCatchRateInOwnedGames(p, selectedGame.id, user.ownedGames);
     }
 
     let generation = 0;

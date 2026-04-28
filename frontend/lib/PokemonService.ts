@@ -126,6 +126,17 @@ export function calculateMetaDataForPokemon(pokemon: Pokemon, evolutionChain: Ev
     };
 }
 
+export function isBestCatchRateInOwnedGames(pokemon: Pokemon, gameId: number, ownedGames: Game[]): boolean {
+    const gameEncounters = pokemon.encounterDetails.encounters.filter(e => e.location.gameId === gameId);
+    if (!gameEncounters.length) return false;
+    const bestInGame = Math.max(...gameEncounters.map(e => e.catchRate));
+    const ownedGameIds = new Set(ownedGames.map(g => g.id));
+    const bestAcrossOwnedGames = Math.max(...pokemon.encounterDetails.encounters
+        .filter(e => ownedGameIds.has(e.location.gameId))
+        .map(e => e.catchRate));
+    return bestInGame >= bestAcrossOwnedGames;
+}
+
 export function calculateMetaDataForAllPokemon(pokemon: Pokemon[], evolutionChains: EvolutionChain[], user: User | null | undefined) {
     return pokemon.map((p) => {
         const evolutionChain = (evolutionChains.find(e => e.id === p.evolutionChainId) as EvolutionChain);

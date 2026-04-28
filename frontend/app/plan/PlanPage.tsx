@@ -5,7 +5,7 @@ import React, {useEffect, useState} from "react";
 import Pokemon, {Encounter, PokemonWithMeta} from "@/types/Pokemon";
 import EvolutionChain from "@/types/EvolutionChain";
 import User from "@/types/User";
-import {calculateMetaDataForAllPokemon} from "@/lib/PokemonService";
+import {calculateMetaDataForAllPokemon, isBestCatchRateInOwnedGames} from "@/lib/PokemonService";
 import PokemonImage from "@/app/PokemonImage";
 import PokemonAccordionItem from "@/app/PokemonAccordionItem";
 import Breeding from "@/app/pokemon-details/[id]/Breeding";
@@ -49,7 +49,7 @@ export default function PlanPage({pokemon, evolutionChains}: Props) {
             .sort((a, b) => b.catchRate - a.catchRate);
 
     const isBestInGame = (p: PokemonWithMeta, gameId: number): boolean =>
-        gameEncountersFor(p, gameId).some(e => e.catchRate === p.encounterDetails.bestCatchRate);
+        isBestCatchRateInOwnedGames(p, gameId, user.ownedGames);
 
     // Section 1: Breedable
     const toBreed = calculatedPokemon.filter(p => p.breedable && !p.owned);
