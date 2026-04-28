@@ -37,6 +37,18 @@ public class BulbapediaClient {
             "Sword", "Shield", "Expansion Pass", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus",
             "Scarlet", "Violet", "Legends: Z-A", "Mega Dimension");
 
+    private static final Map<Integer, List<String>> GenerationsToGames = Map.of(
+            1, List.of("Red", "Blue", "Yellow"),
+            2, List.of("Gold", "Silver", "Crystal"),
+            3, List.of("Ruby", "Sapphire", "Emerald", "FireRed", "LeafGreen"),
+            4, List.of("Diamond", "Pearl", "Platinum", "HeartGold", "SoulSilver"),
+            5, List.of("Black", "White", "Black 2", "White 2"),
+            6, List.of("X", "Y", "Omega Ruby", "Alpha Sapphire"),
+            7, List.of("Sun", "Moon", "Ultra Sun", "Ultra Moon", "Let's Go Pikachu", "Let's Go Eevee"),
+            8, List.of("Sword", "Shield", "Expansion Pass", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus"),
+            9, List.of("Scarlet", "Violet", "Legends: Z-A", "Mega Dimension")
+    );
+
     private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event", "Unobtainable");
     private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari");
 
