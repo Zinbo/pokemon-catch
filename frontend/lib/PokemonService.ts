@@ -67,8 +67,21 @@ function nodeLeadsToTarget(node: EvolvesTo, targetPokedex: number): boolean {
     return node.evolvesTo.some(child => nodeLeadsToTarget(child, targetPokedex));
 }
 
+function findCatchableInEvolutions(evolutions: EvolvesTo[], allPokemon: Pokemon[], ownedGames: Game[]): EvolvesTo | null {
+    for (const evo of evolutions) {
+        const pokemonData = allPokemon.find(p => p.pokedexNumber === evo.pokedexNumber);
+        if (pokemonData && canCatch(pokemonData, ownedGames)) return evo;
+        const deeper = findCatchableInEvolutions(evo.evolvesTo, allPokemon, ownedGames);
+        if (deeper) return deeper;
+    }
+    return null;
+}
+
 function findCatchableAncestor(node: EvolvesTo, targetPokedex: number, allPokemon: Pokemon[], ownedGames: Game[]): EvolvesTo | null {
-    if (node.pokedexNumber === targetPokedex) return null;
+    if (node.pokedexNumber === targetPokedex) {
+        // Target reached: check if any evolution can be caught and bred back to produce the target
+        return findCatchableInEvolutions(node.evolvesTo, allPokemon, ownedGames);
+    }
     if (!nodeLeadsToTarget(node, targetPokedex)) return null;
     const pokemonData = allPokemon.find(p => p.pokedexNumber === node.pokedexNumber);
     if (pokemonData && canCatch(pokemonData, ownedGames)) return node;
