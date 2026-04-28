@@ -3,13 +3,13 @@ import {Box, Button, Flex, Heading} from "@chakra-ui/react";
 import React, {ReactNode, useState} from "react";
 import {ChevronDownIcon, ChevronUpIcon} from "@chakra-ui/icons";
 
-export default function PokemonAccordionItem({isVisible, heading, children} : {isVisible: boolean, heading: string, children: ReactNode}) {
+export default function PokemonAccordionItem({isVisible, heading, children, defaultOpen = true, headingSize = 'md'} : {isVisible: boolean, heading: string, children: ReactNode, defaultOpen?: boolean, headingSize?: string}) {
 
-    const [open, setOpen] = useState(true);
+    const [open, setOpen] = useState(defaultOpen);
 
     return (
         <Box style={{display: isVisible ? "block" : "none"}}>
-            <Flex onClick={() => setOpen(!open)}><Button flex={1} variant='outline'><Box as="span" flex={1} textAlign={'left'}><Heading as='h6' size='md'>{heading}</Heading></Box>{open ? <ChevronUpIcon boxSize={"2em"}/> : <ChevronDownIcon boxSize={"2em"}/>}</Button></Flex>
+            <Flex onClick={() => setOpen(!open)}><Button flex={1} variant='outline'><Box as="span" flex={1} textAlign={'left'}><Heading as='h6' size={headingSize}>{heading}</Heading></Box>{open ? <ChevronUpIcon boxSize={"2em"}/> : <ChevronDownIcon boxSize={"2em"}/>}</Button></Flex>
             <Box style={{display: open? "block" : "none"}} paddingTop={"10px"}>
                 {children}
             </Box>

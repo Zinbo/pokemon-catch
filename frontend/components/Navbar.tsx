@@ -75,6 +75,7 @@ export default function Navbar() {
                 </Flex>
                 <Flex alignItems={'center'}>
                     <Stack direction={'row'} spacing={7}>
+                        <Button as={NextLink} href="/plan">Plan</Button>
                         <Button onClick={toggleColorMode}>
                             {colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
                         </Button>
