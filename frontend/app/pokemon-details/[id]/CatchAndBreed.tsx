@@ -24,7 +24,7 @@ export default function CatchAndBreed({user, pokemon, evolutionChain, allPokemon
     const getPokemonImage = (pokedexNumber: number) => {
         const p = allPokemonInChain.find(p => p.pokedexNumber === pokedexNumber) as PokemonWithMeta;
         return <PokemonImage pokedexNumber={p.pokedexNumber} name={p.name} isOwned={p.owned}
-                             canBeAcquired={p.catchable}/>;
+                             canBeAcquired={p.catchable} catchAndBreed={p.catchAndBreed}/>;
     }
 
     const getCard = (next: EvolvesTo) => {

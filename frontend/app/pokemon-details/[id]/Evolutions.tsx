@@ -25,7 +25,7 @@ export default function Evolutions({evolutionChain, allPokemonInChain}: {
         const pokemonCard = (
             <Flex direction={"column"} alignItems={"center"}>
                 <PokemonImage pokedexNumber={pokemon.pokedexNumber} name={pokemon.name} isOwned={pokemon.owned}
-                              canBeAcquired={pokemon.catchable} alolan={alolan} galarian={galarian}/>
+                              canBeAcquired={pokemon.catchable} catchAndBreed={pokemon.catchAndBreed} alolan={alolan} galarian={galarian}/>
             </Flex>
         )
         if (!next.waysToEvolve.length) return {pokemonCard};
