@@ -38,6 +38,11 @@ public class PokemonController {
         importCaughtPokemon.importPokemon(caughtPokemon);
     }
 
+    @GetMapping("/initialise-encounters")
+    public void initialiseEncounters() {
+        populateDbWithPokeData.populateEncounters();
+    }
+
     @GetMapping()
     public Iterable<Pokemon> getPokemon() {
         log.info("Getting pokemon...");

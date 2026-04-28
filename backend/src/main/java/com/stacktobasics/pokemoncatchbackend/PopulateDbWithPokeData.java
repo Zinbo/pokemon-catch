@@ -12,9 +12,11 @@ import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolutionChainV2
 import com.stacktobasics.pokemoncatchbackend.domain.evolutionv2.EvolvesTo;
 import com.stacktobasics.pokemoncatchbackend.domain.game.Game;
 import com.stacktobasics.pokemoncatchbackend.domain.pokemon.Pokemon;
+import com.stacktobasics.pokemoncatchbackend.infra.BulbapediaClient;
 import com.stacktobasics.pokemoncatchbackend.infra.PokeApiClient;
 import com.stacktobasics.pokemoncatchbackend.infra.dtos.*;
 import com.stacktobasics.pokemoncatchbackend.infra.dtos.evolution.*;
+import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.BooleanUtils;
@@ -33,6 +35,7 @@ import static com.stacktobasics.pokemoncatchbackend.domain.game.Game.UNUSED_GAME
 
 @Component
 @Slf4j
+@AllArgsConstructor
 public class PopulateDbWithPokeData {
 
     public static final int FEMALE = 1;
@@ -44,19 +47,10 @@ public class PopulateDbWithPokeData {
     private final GameRepository gameRepository;
     private final PokemonRepository pokemonRepository;
     private final EvolutionChainV2Repository evolutionChainV2Repository;
+    private final BulbapediaClient bulbapediaClient;
     private final Pattern idFromUrl = Pattern.compile("[^v](\\d+)");
 
     private final ObjectMapper objectMapper;
-
-    public PopulateDbWithPokeData(PokeApiClient client, GameRepository gameRepository,
-                                  PokemonRepository pokemonRepository, EvolutionChainV2Repository evolutionChainV2Repository, ObjectMapper objectMapper) {
-        this.client = client;
-        this.gameRepository = gameRepository;
-        this.pokemonRepository = pokemonRepository;
-        this.evolutionChainV2Repository = evolutionChainV2Repository;
-        this.objectMapper = objectMapper;
-    }
-
 
     public void populateGames() {
         List<GameDTO> games = client.getGames();
@@ -71,6 +65,10 @@ public class PopulateDbWithPokeData {
                             });
                     gameRepository.save(new Game(game.id, englishName));
                 });
+    }
+
+    public void populateEncounters() {
+        bulbapediaClient.populateEncounters();
     }
 
     public void populateAllData(Integer start, Integer end) {
