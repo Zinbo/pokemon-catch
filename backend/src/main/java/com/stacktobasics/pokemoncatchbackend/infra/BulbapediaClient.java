@@ -250,7 +250,7 @@ public class BulbapediaClient {
                 }
 
                 for (Encounter enc : entry.getValue()) {
-                    List<LocationEncounterData> results = parseLocationSection(html, enc.getPokemonName(), enc.getGame());
+                    List<LocationEncounterData> results = parseLocationSection(html, enc.getPokemonName(), enc.getGame(), enc.getLocation());
                     if (results.isEmpty()) {
                         log.debug("No encounter data found for {} at {} ({})", enc.getPokemonName(), pageTitle, enc.getGame());
                         continue;
@@ -332,7 +332,7 @@ public class BulbapediaClient {
 
     // Parses a location page's Pokémon section HTML, returning encounter data for the given
     // Pokémon and game. Returns one entry per time/weather slot where encounter rate > 0.
-    private static List<LocationEncounterData> parseLocationSection(String html, String pokemonName, String game) {
+    private static List<LocationEncounterData> parseLocationSection(String html, String pokemonName, String game, String location) {
         Document doc = Jsoup.parse(html);
         String abbreviation = GAME_TO_ABBREVIATION.getOrDefault(game, game);
         List<LocationEncounterData> results = new ArrayList<>();
@@ -347,10 +347,10 @@ public class BulbapediaClient {
             }
 
             // Table element
-            if (!tableContainsGame(element, abbreviation)) continue;
+            if (!elementHasGameRowSelected(element, abbreviation)) continue;
 
             ColumnFormat format = detectColumnFormat(element);
-            for (Element row : findPokemonRows(element, pokemonName)) {
+            for (Element row : findPokemonRows(element, pokemonName, abbreviation, location)) {
                 results.addAll(extractFromRow(row, format, currentSectionMethod));
             }
         }
@@ -370,9 +370,13 @@ public class BulbapediaClient {
 
     // Returns true if any <th> in the table has text exactly matching the game abbreviation.
     // Game version indicators always appear as the sole text content of a <th> element.
-    private static boolean tableContainsGame(Element table, String abbreviation) {
+    private static boolean elementHasGameRowSelected(Element table, String abbreviation) {
         for (Element th : table.select("th")) {
-            if (th.text().trim().equals(abbreviation)) return true;
+            var isForRightGame = th.text().trim().equals(abbreviation);
+            if (!isForRightGame) continue;
+            var styleComponents = th.attr("style").split(":");
+            var hasColouredBackground = styleComponents.length == 2 && !styleComponents[1].startsWith("#FFF");
+            if(hasColouredBackground) return true;
         }
         return false;
     }
@@ -394,13 +398,18 @@ public class BulbapediaClient {
     }
 
     // Finds all data rows in a table that contain a link for the given Pokémon.
-    private static List<Element> findPokemonRows(Element table, String pokemonName) {
+    private static List<Element> findPokemonRows(Element table, String pokemonName, String gameAbbreviation, String location) {
         List<Element> rows = new ArrayList<>();
         String targetTitle = pokemonName + " (Pokémon)";
         for (Element row : table.select("tr")) {
             boolean found = row.select("a").stream()
                     .anyMatch(a -> targetTitle.equals(a.attr("title")));
-            if (found) rows.add(row);
+
+            // also do check that it contains a th with the game abbreviation and background
+            if (found && elementHasGameRowSelected(row, gameAbbreviation)) {
+                log.info("Found match for pokemon {} for game {} and location: {}: {}", pokemonName, gameAbbreviation, location, row.html());
+                rows.add(row);
+            }
         }
         return rows;
     }
