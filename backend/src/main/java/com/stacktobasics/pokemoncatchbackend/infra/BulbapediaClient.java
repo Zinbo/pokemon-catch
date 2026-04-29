@@ -52,6 +52,33 @@ public class BulbapediaClient {
     private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event", "Unobtainable");
     private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari");
 
+    private static final Map<String, String> DAY_ABBREVIATIONS = Map.of(
+            "Mo", "Monday", "Tu", "Tuesday", "We", "Wednesday",
+            "Th", "Thursday", "Fr", "Friday", "Sa", "Saturday", "Su", "Sunday"
+    );
+
+    private static final Set<String> GROUP_LEVEL_METHODS = Set.of(
+            "Max Raid Battle", "Tera Raid Battle", "Dynamax Adventure"
+    );
+
+    private static final Pattern GIFT_FIRST_PARTNER = Pattern.compile(
+            "^First partner Pokémon from .+? in (.+?)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern GIFT_RECEIVED_IF = Pattern.compile(
+            "^Received from .+? in (.+?)\\s+if (.+)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern GIFT_RECEIVED_FROM = Pattern.compile(
+            "^Received from .+? in (.+?)(?:\\s+after (.+))?$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern ISLAND_SCAN = Pattern.compile(
+            "^(.+?)\\s*\\(Island Scan\\)(Mo|Tu|We|Th|Fr|Sa|Su)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern TRADE_PATTERN = Pattern.compile(
+            "^Trade (.+?) on (.+?)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern PAREN_METHOD_SUFFIX = Pattern.compile(
+            "^(.*?)\\s*\\(([^)]+)\\)\\s*$");
+
     private static final int LIMIT = 1;
 
     private final EncounterRepository encounterRepository;
@@ -126,7 +153,7 @@ public class BulbapediaClient {
             // The Pokemon name link has a title attribute ending with "(Pokémon)" —
             // use a Java string match with Unicode escape to avoid CSS selector encoding issues
             Element nameLink = row.select("a[href]").stream()
-                    .filter(a -> a.attr("title").endsWith("(Pok\u00e9mon)"))
+                    .filter(a -> a.attr("title").endsWith("(Pokémon)"))
                     .findFirst().orElse(null);
             if (nameLink == null) continue;
 
@@ -227,29 +254,42 @@ public class BulbapediaClient {
             List<String> matchedGames = findMatchingGames(gameNames);
             if (matchedGames.isEmpty()) continue;
 
-            // Each <br> or comma in the cell separates a distinct encounter entry
-            List<String[]> parts = splitByBrOrComma(contentCell);
-
-            // Pre-compute cleaned text for each part, passing location-type context forward
-            // so that bare numbers like "26" after "Routes 22" resolve to "Route 26"
-            String[] cleanedTexts = calculateCleanEncounterTexts(parts);
+            // Split by <br> first, then by comma within each br-group.
+            // This preserves group context so a trailing method like "(Max Raid Battle)"
+            // on the last comma-part can be propagated to all parts in the same br-group.
+            List<List<String[]>> brGroups = splitByBrThenComma(contentCell);
 
             for (String game : matchedGames) {
-                for (int i = 0; i < parts.size(); i++) {
-                    String encounterHtml = parts.get(i)[0].trim();
-                    String encounterText = parts.get(i)[1].trim();
-                    if (encounterText.isBlank()) continue;
-                    if(IGNORED_ENCOUNTERS.contains(encounterText) || IGNORED_ENCOUNTERS_STARTS_WITH.stream().anyMatch(encounterText::startsWith)) continue;
+                for (List<String[]> group : brGroups) {
+                    String groupMethod = extractGroupMethod(group);
+                    List<String[]> strippedGroup = stripGroupMethod(group, groupMethod);
 
-                    Encounter encounter = new Encounter();
-                    encounter.setId(UUID.randomUUID());
-                    encounter.setPokedexNumber(entry.dexNumber());
-                    encounter.setPokemonName(entry.name());
-                    encounter.setGame(game);
-                    encounter.setEncounterHtml(encounterHtml);
-                    encounter.setEncounterText(encounterText);
-                    encounter.setCleanedUpEncounterText(cleanedTexts[i]);
-                    encounters.add(encounter);
+                    // Context-propagating clean texts scoped to this br-group
+                    String[] cleanedTexts = calculateCleanEncounterTexts(strippedGroup);
+
+                    for (int i = 0; i < strippedGroup.size(); i++) {
+                        String encounterHtml = strippedGroup.get(i)[0].trim();
+                        String encounterText = strippedGroup.get(i)[1].trim();
+                        if (encounterText.isBlank()) continue;
+                        if (IGNORED_ENCOUNTERS.contains(encounterText) || IGNORED_ENCOUNTERS_STARTS_WITH.stream().anyMatch(encounterText::startsWith)) continue;
+
+                        ParsedDetails details = parseEncounterDetails(cleanedTexts[i]);
+                        String finalMethod = details.method() != null ? details.method() : groupMethod;
+
+                        Encounter encounter = new Encounter();
+                        encounter.setId(UUID.randomUUID());
+                        encounter.setPokedexNumber(entry.dexNumber());
+                        encounter.setPokemonName(entry.name());
+                        encounter.setGame(game);
+                        encounter.setEncounterHtml(encounterHtml);
+                        encounter.setEncounterText(encounterText);
+                        encounter.setCleanedUpEncounterText(cleanedTexts[i]);
+                        encounter.setLocation(details.location());
+                        encounter.setConditions(details.conditions());
+                        encounter.setMethod(finalMethod);
+                        encounter.setCatchRate(details.catchRate());
+                        encounters.add(encounter);
+                    }
                 }
             }
         }
@@ -274,25 +314,41 @@ public class BulbapediaClient {
                 .collect(Collectors.toList());
     }
 
-    // Splits the child nodes of an element at each <br> tag or comma in a text node.
-    // Returns a list of [innerHtml, plainText] pairs for each segment.
-    private List<String[]> splitByBrOrComma(Element element) {
+    // Splits child nodes into br-separated groups, each group then comma-split into [html, text] pairs.
+    private List<List<String[]>> splitByBrThenComma(Element element) {
+        return splitNodesByBr(element).stream()
+                .map(this::commaSplitNodes)
+                .filter(group -> !group.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    // Groups the child nodes of an element by <br> boundaries.
+    private List<List<Node>> splitNodesByBr(Element element) {
+        List<List<Node>> groups = new ArrayList<>();
+        List<Node> current = new ArrayList<>();
+        for (Node node : element.childNodes()) {
+            if (node instanceof Element el && "br".equals(el.tagName())) {
+                groups.add(current);
+                current = new ArrayList<>();
+            } else {
+                current.add(node);
+            }
+        }
+        groups.add(current);
+        return groups;
+    }
+
+    // Comma-splits a list of nodes into [html, text] pairs.
+    private List<String[]> commaSplitNodes(List<Node> nodes) {
         List<String[]> parts = new ArrayList<>();
         StringBuilder currentHtml = new StringBuilder();
         StringBuilder currentText = new StringBuilder();
 
-        for (Node node : element.childNodes()) {
+        for (Node node : nodes) {
             if (node instanceof Element el) {
-                if ("br".equals(el.tagName())) {
-                    flushSegment(parts, currentHtml, currentText);
-                    currentHtml = new StringBuilder();
-                    currentText = new StringBuilder();
-                } else {
-                    currentHtml.append(el.outerHtml());
-                    currentText.append(el.text());
-                }
+                currentHtml.append(el.outerHtml());
+                currentText.append(el.text());
             } else if (node instanceof TextNode tn) {
-                // Commas in text nodes between elements act as encounter separators
                 String[] htmlParts = tn.outerHtml().split(",", -1);
                 String[] textParts = tn.text().split(",", -1);
                 for (int i = 0; i < htmlParts.length; i++) {
@@ -307,7 +363,6 @@ public class BulbapediaClient {
             }
         }
         flushSegment(parts, currentHtml, currentText);
-
         return parts;
     }
 
@@ -316,6 +371,69 @@ public class BulbapediaClient {
         if (!t.isBlank()) {
             parts.add(new String[]{html.toString().trim(), t});
         }
+    }
+
+    // If the last comma-part ends with a known parenthetical method like "(Max Raid Battle)",
+    // returns that method name so it can be applied to all parts in the group.
+    private static String extractGroupMethod(List<String[]> group) {
+        if (group.isEmpty()) return null;
+        String lastText = group.get(group.size() - 1)[1];
+        Matcher m = PAREN_METHOD_SUFFIX.matcher(lastText.trim());
+        if (m.matches() && GROUP_LEVEL_METHODS.contains(m.group(2))) {
+            return m.group(2);
+        }
+        return null;
+    }
+
+    // Returns a copy of the group with the trailing parenthetical stripped from the last part.
+    private static List<String[]> stripGroupMethod(List<String[]> group, String method) {
+        if (method == null) return group;
+        List<String[]> result = new ArrayList<>(group);
+        String[] last = result.get(result.size() - 1);
+        Matcher m = PAREN_METHOD_SUFFIX.matcher(last[1].trim());
+        if (m.matches()) {
+            String strippedText = m.group(1).trim();
+            String strippedHtml = last[0].replace("(" + method + ")", "").trim();
+            result.set(result.size() - 1, new String[]{strippedHtml, strippedText});
+        }
+        return result;
+    }
+
+    // Extracts structured encounter details from cleaned encounter text using pattern matching.
+    // Returns unknown() for bare location text that requires a location-page visit to classify.
+    private static ParsedDetails parseEncounterDetails(String cleanedText) {
+        String text = cleanedText.trim();
+
+        Matcher islandScan = ISLAND_SCAN.matcher(text);
+        if (islandScan.matches()) {
+            String day = DAY_ABBREVIATIONS.getOrDefault(islandScan.group(2), islandScan.group(2));
+            return new ParsedDetails("Island Scan", islandScan.group(1).trim(), List.of(day), 100);
+        }
+
+        Matcher trade = TRADE_PATTERN.matcher(text);
+        if (trade.matches()) {
+            return new ParsedDetails("Trade", trade.group(2).trim(), List.of("Trade " + trade.group(1).trim()), 0);
+        }
+
+        Matcher giftIf = GIFT_RECEIVED_IF.matcher(text);
+        if (giftIf.matches()) {
+            return new ParsedDetails("Received as gift", giftIf.group(1).trim(), List.of(giftIf.group(2).trim()), 100);
+        }
+
+        Matcher giftAfter = GIFT_RECEIVED_FROM.matcher(text);
+        if (giftAfter.matches()) {
+            List<String> conditions = giftAfter.group(2) != null
+                    ? List.of(giftAfter.group(2).trim())
+                    : Collections.emptyList();
+            return new ParsedDetails("Received as gift", giftAfter.group(1).trim(), conditions, 100);
+        }
+
+        Matcher firstPartner = GIFT_FIRST_PARTNER.matcher(text);
+        if (firstPartner.matches()) {
+            return new ParsedDetails("Received as gift", firstPartner.group(1).trim(), Collections.emptyList(), 100);
+        }
+
+        return ParsedDetails.unknown();
     }
 
     // Produces a clean single location name from raw encounter text.
@@ -352,4 +470,10 @@ public class BulbapediaClient {
     }
 
     private record PokemonEntry(int dexNumber, String name, String pageTitle) {}
+
+    private record ParsedDetails(String method, String location, List<String> conditions, int catchRate) {
+        static ParsedDetails unknown() {
+            return new ParsedDetails(null, null, null, 0);
+        }
+    }
 }
