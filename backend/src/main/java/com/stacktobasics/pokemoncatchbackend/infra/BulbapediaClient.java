@@ -24,6 +24,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class BulbapediaClient {
 
+    // Cases to handle:
+    // Grand Underground - Grassland Cave, Sunlit Cavern, Swampy Cave, Riverbank Cave, Still-Water Cavern, Bogsunk Cavern (after obtaining the National Pokédex) - Bulbasaur
+    // Can't find catch rates or method for caterpie, route 2
+
     private static final String ALL_POKEMON_PAGE = "List_of_Pokémon_by_National_Pokédex_number";
     private static final String BASE_URL = "https://bulbapedia.bulbagarden.net/w/api.php";
 
@@ -52,6 +56,8 @@ public class BulbapediaClient {
     private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event", "Unobtainable");
     private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari");
 
+    // ── Phase 1: text-pattern matching for known encounter types ─────────────
+
     private static final Map<String, String> DAY_ABBREVIATIONS = Map.of(
             "Mo", "Monday", "Tu", "Tuesday", "We", "Wednesday",
             "Th", "Thursday", "Fr", "Friday", "Sa", "Saturday", "Su", "Sunday"
@@ -79,7 +85,84 @@ public class BulbapediaClient {
     private static final Pattern PAREN_METHOD_SUFFIX = Pattern.compile(
             "^(.*?)\\s*\\(([^)]+)\\)\\s*$");
 
-    private static final int LIMIT = 1;
+    // ── Phase 2: location-page parsing ──────────────────────────────────────
+
+    // Game name → Bulbapedia table column abbreviation. Clashes (R=Red/Ruby, S=Silver/Sun/Scarlet, etc.)
+    // are safe because location pages are region-specific: a Kanto page never has a Hoenn Gen 3 table.
+    private static final Map<String, String> GAME_TO_ABBREVIATION = Map.ofEntries(
+            Map.entry("Red", "R"),           Map.entry("Blue", "B"),          Map.entry("Yellow", "Y"),
+            Map.entry("Gold", "G"),          Map.entry("Silver", "S"),         Map.entry("Crystal", "C"),
+            Map.entry("Ruby", "R"),          Map.entry("Sapphire", "S"),       Map.entry("Emerald", "E"),
+            Map.entry("FireRed", "FR"),      Map.entry("LeafGreen", "LG"),
+            Map.entry("Diamond", "D"),       Map.entry("Pearl", "P"),          Map.entry("Platinum", "Pt"),
+            Map.entry("HeartGold", "HG"),    Map.entry("SoulSilver", "SS"),
+            Map.entry("Black", "B"),         Map.entry("White", "W"),
+            Map.entry("Black 2", "B2"),      Map.entry("White 2", "W2"),
+            Map.entry("X", "X"),             Map.entry("Y", "Y"),
+            Map.entry("Omega Ruby", "OR"),   Map.entry("Alpha Sapphire", "AS"),
+            Map.entry("Sun", "S"),           Map.entry("Moon", "M"),
+            Map.entry("Ultra Sun", "US"),    Map.entry("Ultra Moon", "UM"),
+            Map.entry("Let's Go Pikachu", "P"), Map.entry("Let's Go Eevee", "E"),
+            Map.entry("Sword", "Sw"),        Map.entry("Shield", "Sh"),        Map.entry("Expansion Pass", "SwSh"),
+            Map.entry("Brilliant Diamond", "BD"), Map.entry("Shining Pearl", "SP"),
+            Map.entry("Legends: Arceus", "LA"),
+            Map.entry("Scarlet", "S"),       Map.entry("Violet", "V"),
+            Map.entry("Legends: Z-A", "ZA"), Map.entry("Mega Dimension", "MD")
+    );
+
+    // Image alt text in the Location cell → human-readable method name
+    private static final Map<String, String> METHOD_ALT_TO_NAME = Map.ofEntries(
+            Map.entry("Grass", "Walking"),
+            Map.entry("Tall grass", "Walking"),
+            Map.entry("Surfing", "Surfing"),
+            Map.entry("Old Rod", "Old Rod"),
+            Map.entry("Good Rod", "Good Rod"),
+            Map.entry("Super Rod", "Super Rod"),
+            Map.entry("Headbutt", "Headbutt"),
+            Map.entry("Dark grass", "Dark Grass"),
+            Map.entry("Rustling grass", "Rustling Grass"),
+            Map.entry("Rippling water", "Rippling Water"),
+            Map.entry("Rock Smash", "Rock Smash"),
+            Map.entry("Swarm", "Swarm"),
+            Map.entry("Gift", "Received as gift"),
+            Map.entry("Berry tree", "Berry Tree"),
+            Map.entry("Poké Radar", "Poké Radar"),
+            Map.entry("Fishing", "Fishing")
+    );
+
+    // td background-color → condition label. Used to identify time-of-day and weather rate cells.
+    // Colors are lower-cased for case-insensitive matching against style attribute values.
+    private static final Map<String, String> CONDITION_CELL_COLORS = new LinkedHashMap<>();
+    static {
+        // Time-of-day (Gen 2, 4, 7, 8 BDSP)
+        CONDITION_CELL_COLORS.put("#a5dfec", "Morning");
+        CONDITION_CELL_COLORS.put("#a9d7fd", "Day");
+        CONDITION_CELL_COLORS.put("#cec2ef", "Night");
+        // Evening (Gen 9) — placeholder color, verify when testing Paldea locations
+        CONDITION_CELL_COLORS.put("#f5deb3", "Evening");
+        // Weather (Gen 8 Wild Area) — same colors as column headers
+        CONDITION_CELL_COLORS.put("#ffe57a", "Clear");
+        CONDITION_CELL_COLORS.put("#82c274", "Cloudy");
+        CONDITION_CELL_COLORS.put("#74acf5", "Rain");
+        CONDITION_CELL_COLORS.put("#998b8c", "Thunderstorm");
+        CONDITION_CELL_COLORS.put("#81dff7", "Snow");
+        CONDITION_CELL_COLORS.put("#98d8d8", "Blizzard");
+        CONDITION_CELL_COLORS.put("#ef7374", "Harsh sunlight");
+        CONDITION_CELL_COLORS.put("#d1c17d", "Sandstorm");
+        CONDITION_CELL_COLORS.put("#a292bc", "Fog");
+    }
+
+    // Image alt texts used in column headers to detect the table's rate-column format
+    private static final Set<String> TIME_CONDITION_ALTS = Set.of("Morning", "Day", "Evening", "Night");
+    private static final Set<String> WEATHER_CONDITION_ALTS = Set.of(
+            "Clear", "Cloudy", "Rain", "Thunderstorm", "Snow", "Blizzard",
+            "Harsh sunlight", "Sandstorm", "Fog"
+    );
+
+    private static final Pattern BG_COLOR_PATTERN = Pattern.compile(
+            "background(?:-color)?\\s*:\\s*(#[0-9a-fA-F]{3,8})", Pattern.CASE_INSENSITIVE);
+
+    private static final int LIMIT = 20;
 
     private final EncounterRepository encounterRepository;
     private final RestTemplate restTemplate;
@@ -90,6 +173,8 @@ public class BulbapediaClient {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
     }
+
+    // ── Phase 1: populate encounters from Pokémon pages ──────────────────────
 
     public void populateEncounters() {
         List<PokemonEntry> pokemonEntries;
@@ -102,11 +187,11 @@ public class BulbapediaClient {
         log.info("Found {} unique Pokemon pages to process", pokemonEntries.size());
 
         List<Encounter> allEncounters = new ArrayList<>();
-        for (int i = 0; i < pokemonEntries.size(); i++) {
-            if(i == LIMIT) {
+        for (int i = 9; i < 10; i++) {
+            /*if (i == LIMIT) {
                 log.info("Stopping at LIMIT {}.", LIMIT);
                 break;
-            }
+            }*/
             var entry = pokemonEntries.get(i);
             try {
                 log.info("Processing {} (#{})", entry.name(), entry.dexNumber());
@@ -128,9 +213,294 @@ public class BulbapediaClient {
 
         log.info("All encounter text found:");
         allEncounters.forEach(e -> log.info("[{}] {}: {}", e.getGame(), e.getPokemonName(), e.getCleanedUpEncounterText()));
+
+        log.info("Enriching encounter info now...");
+        enrichEncountersFromLocationPages();
+        log.info("Finished enriching encounters now.");
     }
 
-    // Fetches the national dex list HTML and extracts (dexNumber, pokemonName, pageTitle) for each unique Pokemon page.
+    // Generic Bulbapedia pages that appear as "type" prefixes in multi-location cells
+    // (e.g. "<a href='/wiki/Route'>Routes</a> <a href='/wiki/Kanto_Route_2'>2</a>")
+    // and must be skipped when extracting a specific location page title.
+    private static final Set<String> GENERIC_LOCATION_PAGES = Set.of(
+            "Route", "Cave", "Town", "City", "Forest", "Road", "Path", "Island"
+    );
+
+    // ── Phase 2: enrich encounters from location pages ────────────────────────
+
+    public void enrichEncountersFromLocationPages() {
+        List<Encounter> toEnrich = encounterRepository.findByMethodIsNull();
+        log.info("Enriching {} encounters from location pages", toEnrich.size());
+
+        // Group by page title to fetch each location page only once
+        Map<String, List<Encounter>> byPage = new LinkedHashMap<>();
+        for (Encounter enc : toEnrich) {
+            extractPageTitleFromHtml(enc.getEncounterHtml())
+                    .ifPresent(pt -> byPage.computeIfAbsent(pt, k -> new ArrayList<>()).add(enc));
+        }
+        log.info("Fetching {} unique location pages", byPage.size());
+
+        for (Map.Entry<String, List<Encounter>> entry : byPage.entrySet()) {
+            String pageTitle = entry.getKey();
+            try {
+                String html = fetchLocationPokemonSection(pageTitle);
+                if (html == null) {
+                    log.warn("No Pokémon section found for location page: {}", pageTitle);
+                    continue;
+                }
+
+                for (Encounter enc : entry.getValue()) {
+                    List<LocationEncounterData> results = parseLocationSection(html, enc.getPokemonName(), enc.getGame());
+                    if (results.isEmpty()) {
+                        log.debug("No encounter data found for {} at {} ({})", enc.getPokemonName(), pageTitle, enc.getGame());
+                        continue;
+                    }
+                    // Replace the original encounter with one record per time/weather slot
+                    for (LocationEncounterData data : results) {
+                        Encounter expanded = copyEncounterBaseFields(enc);
+                        expanded.setMethod(data.method());
+                        expanded.setCatchRate(data.catchRate());
+                        expanded.setConditions(mergeConditions(enc.getConditions(), data.conditions()));
+                        encounterRepository.save(expanded);
+                    }
+                    encounterRepository.delete(enc);
+                }
+
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Interrupted during location enrichment, stopping");
+                return;
+            } catch (Exception e) {
+                log.error("Failed to enrich from page {}: {}", pageTitle, e.getMessage());
+            }
+        }
+    }
+
+    // Extracts the /wiki/PageTitle from the encounterHtml anchor links.
+    // Skips generic category pages (e.g. /wiki/Route) that appear as type prefixes in
+    // multi-location cells like "<a href='/wiki/Route'>Routes</a> <a href='/wiki/Kanto_Route_2'>2</a>".
+    private static Optional<String> extractPageTitleFromHtml(String encounterHtml) {
+        if (encounterHtml == null || encounterHtml.isBlank()) return Optional.empty();
+        for (Element a : Jsoup.parseBodyFragment(encounterHtml).select("a[href^=/wiki/]")) {
+            String pageTitle = a.attr("href").substring("/wiki/".length());
+            if (!GENERIC_LOCATION_PAGES.contains(pageTitle)) {
+                return Optional.of(pageTitle);
+            }
+        }
+        return Optional.empty();
+    }
+
+    // Fetches the "Pokémon" section HTML from a location page, or null if not found.
+    private String fetchLocationPokemonSection(String pageTitle) throws Exception {
+        String sectionsJson = restTemplate.getForObject(
+                UriComponentsBuilder.fromHttpUrl(BASE_URL)
+                        .queryParam("action", "parse")
+                        .queryParam("format", "json")
+                        .queryParam("prop", "sections")
+                        .queryParam("page", pageTitle)
+                        .build().encode().toUri(),
+                String.class);
+
+        JsonNode root = objectMapper.readTree(sectionsJson);
+        if (root.has("error")) {
+            log.warn("Bulbapedia API error for {}: {}", pageTitle, root.path("error").path("info").asText());
+            return null;
+        }
+
+        String sectionIndex = null;
+        for (JsonNode section : root.path("parse").path("sections")) {
+            if ("Pokémon".equals(section.path("line").asText())) {
+                sectionIndex = section.path("index").asText();
+                break;
+            }
+        }
+        if (sectionIndex == null) return null;
+
+        String htmlJson = restTemplate.getForObject(
+                UriComponentsBuilder.fromHttpUrl(BASE_URL)
+                        .queryParam("action", "parse")
+                        .queryParam("format", "json")
+                        .queryParam("prop", "text")
+                        .queryParam("section", sectionIndex)
+                        .queryParam("page", pageTitle)
+                        .build().encode().toUri(),
+                String.class);
+
+        return objectMapper.readTree(htmlJson).path("parse").path("text").path("*").asText();
+    }
+
+    // Parses a location page's Pokémon section HTML, returning encounter data for the given
+    // Pokémon and game. Returns one entry per time/weather slot where encounter rate > 0.
+    private static List<LocationEncounterData> parseLocationSection(String html, String pokemonName, String game) {
+        Document doc = Jsoup.parse(html);
+        String abbreviation = GAME_TO_ABBREVIATION.getOrDefault(game, game);
+        List<LocationEncounterData> results = new ArrayList<>();
+
+        // Track current h4 header for Gen 8 Wild Area sections ("Hidden encounters", "Visible encounters", "Wanderers")
+        String currentSectionMethod = null;
+
+        for (Element element : doc.select("h4, table")) {
+            if ("h4".equals(element.tagName())) {
+                currentSectionMethod = sectionHeaderToMethod(element.text().trim());
+                continue;
+            }
+
+            // Table element
+            if (!tableContainsGame(element, abbreviation)) continue;
+
+            ColumnFormat format = detectColumnFormat(element);
+            for (Element row : findPokemonRows(element, pokemonName)) {
+                results.addAll(extractFromRow(row, format, currentSectionMethod));
+            }
+        }
+
+        return results;
+    }
+
+    // Maps Gen 8 Wild Area h4 section headers to method names.
+    private static String sectionHeaderToMethod(String headerText) {
+        return switch (headerText) {
+            case "Hidden encounters"  -> "Walking (Hidden)";
+            case "Visible encounters" -> "Walking (Overworld)";
+            case "Wanderers"          -> "Wanderer";
+            default                   -> null;
+        };
+    }
+
+    // Returns true if any <th> in the table has text exactly matching the game abbreviation.
+    // Game version indicators always appear as the sole text content of a <th> element.
+    private static boolean tableContainsGame(Element table, String abbreviation) {
+        for (Element th : table.select("th")) {
+            if (th.text().trim().equals(abbreviation)) return true;
+        }
+        return false;
+    }
+
+    // Inspects <th> image alt texts to determine how rate columns are arranged.
+    private static ColumnFormat detectColumnFormat(Element table) {
+        Set<String> timeAlts = new HashSet<>();
+        Set<String> weatherAlts = new HashSet<>();
+        for (Element img : table.select("th img")) {
+            String alt = img.attr("alt");
+            if (TIME_CONDITION_ALTS.contains(alt))    timeAlts.add(alt);
+            if (WEATHER_CONDITION_ALTS.contains(alt)) weatherAlts.add(alt);
+        }
+        if (!weatherAlts.isEmpty())            return ColumnFormat.WEATHER;
+        if (timeAlts.contains("Evening"))      return ColumnFormat.MORNING_DAY_EVENING_NIGHT;
+        if (timeAlts.contains("Morning"))      return ColumnFormat.MORNING_DAY_NIGHT;
+        if (timeAlts.contains("Night"))        return ColumnFormat.DAY_NIGHT;
+        return ColumnFormat.SINGLE;
+    }
+
+    // Finds all data rows in a table that contain a link for the given Pokémon.
+    private static List<Element> findPokemonRows(Element table, String pokemonName) {
+        List<Element> rows = new ArrayList<>();
+        String targetTitle = pokemonName + " (Pokémon)";
+        for (Element row : table.select("tr")) {
+            boolean found = row.select("a").stream()
+                    .anyMatch(a -> targetTitle.equals(a.attr("title")));
+            if (found) rows.add(row);
+        }
+        return rows;
+    }
+
+    // Extracts encounter data from a single table row, returning one entry per non-zero rate slot.
+    private static List<LocationEncounterData> extractFromRow(Element row, ColumnFormat format, String sectionMethod) {
+        // Method: prefer the icon alt text in the row; fall back to the section header
+        String method = sectionMethod;
+        for (Element img : row.select("img")) {
+            String alt = img.attr("alt");
+            if (METHOD_ALT_TO_NAME.containsKey(alt)) {
+                method = METHOD_ALT_TO_NAME.get(alt);
+                break;
+            }
+        }
+
+        if (format == ColumnFormat.SINGLE) {
+            int rate = extractSingleRate(row);
+            if (rate > 0 && method != null) {
+                return List.of(new LocationEncounterData(method, rate, Collections.emptyList()));
+            }
+            return Collections.emptyList();
+        }
+
+        // For time-of-day and weather: each colored <td> maps to a condition
+        String finalMethod = method;
+        return row.select("td").stream()
+                .map(td -> {
+                    String condition = extractConditionFromStyle(td.attr("style"));
+                    if (condition == null) return null;
+                    int rate = extractRateFromCell(td);
+                    if (rate <= 0 || finalMethod == null) return null;
+                    return new LocationEncounterData(finalMethod, rate, List.of(condition));
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // Returns the first positive percentage found in any <td> of the row.
+    private static int extractSingleRate(Element row) {
+        for (Element td : row.select("td")) {
+            int rate = extractRateFromCell(td);
+            if (rate > 0) return rate;
+        }
+        return 0;
+    }
+
+    // Parses "40%" → 40, "0%" / "—" / "Varies" → 0.
+    private static int extractRateFromCell(Element td) {
+        String text = td.text().trim();
+        if (text.endsWith("%")) {
+            try {
+                return Integer.parseInt(text.substring(0, text.length() - 1).trim());
+            } catch (NumberFormatException ignored) {}
+        }
+        return 0;
+    }
+
+    // Looks up the background-color value in a style attribute against CONDITION_CELL_COLORS.
+    private static String extractConditionFromStyle(String style) {
+        if (style == null || style.isBlank()) return null;
+        Matcher m = BG_COLOR_PATTERN.matcher(style);
+        if (!m.find()) return null;
+        String color = normalizeHexColor(m.group(1));
+        return CONDITION_CELL_COLORS.get(color);
+    }
+
+    // Expands 3-digit hex shorthand (#abc → #aabbcc) and lower-cases for map lookup.
+    private static String normalizeHexColor(String hex) {
+        hex = hex.toLowerCase();
+        if (hex.length() == 4) { // #abc
+            char r = hex.charAt(1), g = hex.charAt(2), b = hex.charAt(3);
+            return "#" + r + r + g + g + b + b;
+        }
+        return hex;
+    }
+
+    private static Encounter copyEncounterBaseFields(Encounter source) {
+        Encounter copy = new Encounter();
+        copy.setId(UUID.randomUUID());
+        copy.setPokedexNumber(source.getPokedexNumber());
+        copy.setPokemonName(source.getPokemonName());
+        copy.setGame(source.getGame());
+        copy.setEncounterHtml(source.getEncounterHtml());
+        copy.setEncounterText(source.getEncounterText());
+        copy.setCleanedUpEncounterText(source.getCleanedUpEncounterText());
+        copy.setLocation(source.getLocation());
+        return copy;
+    }
+
+    private static List<String> mergeConditions(List<String> existing, List<String> incoming) {
+        if (existing == null || existing.isEmpty()) return incoming != null ? incoming : Collections.emptyList();
+        if (incoming == null || incoming.isEmpty()) return existing;
+        List<String> merged = new ArrayList<>(existing);
+        merged.addAll(incoming);
+        return merged;
+    }
+
+    // ── Internal Phase 1 helpers ──────────────────────────────────────────────
+
     private List<PokemonEntry> getPokemonList() throws Exception {
         String url = BASE_URL + "?action=parse&format=json&prop=text&page=" + ALL_POKEMON_PAGE;
         String json = restTemplate.getForObject(url, String.class);
@@ -142,25 +512,21 @@ public class BulbapediaClient {
         Set<String> seenPageTitles = new HashSet<>();
 
         for (Element row : doc.select("tr")) {
-            // Dex number is in the first <td> with a monospace font style
             Element dexCell = row.selectFirst("td[style*='monospace']");
             if (dexCell == null) continue;
 
-            String dexText = dexCell.text().trim(); // e.g. "#0001"
+            String dexText = dexCell.text().trim();
             if (!dexText.startsWith("#") || dexText.contains("?")) continue;
             int dexNumber = Integer.parseInt(dexText.substring(1));
 
-            // The Pokemon name link has a title attribute ending with "(Pokémon)" —
-            // use a Java string match with Unicode escape to avoid CSS selector encoding issues
             Element nameLink = row.select("a[href]").stream()
                     .filter(a -> a.attr("title").endsWith("(Pokémon)"))
                     .findFirst().orElse(null);
             if (nameLink == null) continue;
 
-            String pageTitle = nameLink.attr("title"); // e.g. "Bulbasaur (Pokémon)"
+            String pageTitle = nameLink.attr("title");
             String pokemonName = nameLink.text().trim();
 
-            // Deduplicate — alternate forms (Alolan, Hisuian, etc.) share the same page
             if (seenPageTitles.contains(pageTitle)) continue;
             seenPageTitles.add(pageTitle);
 
@@ -193,7 +559,6 @@ public class BulbapediaClient {
         return parseGameLocationsHtml(html, entry);
     }
 
-    // Fetches the sections list for a Pokemon page and returns the index of "Game locations".
     private Optional<String> getGameLocationsSectionIndex(String pageTitle) throws Exception {
         String json = restTemplate.getForObject(
                 UriComponentsBuilder.fromHttpUrl(BASE_URL)
@@ -213,17 +578,14 @@ public class BulbapediaClient {
         return Optional.empty();
     }
 
-    // Parses the game locations section HTML, producing one Encounter per game per br-separated location entry.
     private List<Encounter> parseGameLocationsHtml(String html, PokemonEntry entry) {
         List<Encounter> encounters = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
         for (Element row : doc.select("tr")) {
-            // Only process rows that have direct <th> children (game header rows)
             Elements ths = row.select("> th");
             if (ths.isEmpty()) continue;
 
-            // Collect game names from the <th> elements, skipping generation/unavailable headers
             List<String> gameNames = new ArrayList<>();
             boolean skip = false;
             for (Element th : ths) {
@@ -233,14 +595,10 @@ public class BulbapediaClient {
                     skip = true;
                     break;
                 }
-                if (!text.isEmpty()) {
-                    gameNames.add(text);
-                }
+                if (!text.isEmpty()) gameNames.add(text);
             }
             if (skip || gameNames.isEmpty()) continue;
 
-            // The location data is in the single <td> sibling of the <th> elements.
-            // The actual content lives in a nested td.roundy inside it.
             Element locationTd = row.selectFirst("> td");
             if (locationTd == null) continue;
 
@@ -254,24 +612,20 @@ public class BulbapediaClient {
             List<String> matchedGames = findMatchingGames(gameNames);
             if (matchedGames.isEmpty()) continue;
 
-            // Split by <br> first, then by comma within each br-group.
-            // This preserves group context so a trailing method like "(Max Raid Battle)"
-            // on the last comma-part can be propagated to all parts in the same br-group.
             List<List<String[]>> brGroups = splitByBrThenComma(contentCell);
 
             for (String game : matchedGames) {
                 for (List<String[]> group : brGroups) {
                     String groupMethod = extractGroupMethod(group);
                     List<String[]> strippedGroup = stripGroupMethod(group, groupMethod);
-
-                    // Context-propagating clean texts scoped to this br-group
                     String[] cleanedTexts = calculateCleanEncounterTexts(strippedGroup);
 
                     for (int i = 0; i < strippedGroup.size(); i++) {
                         String encounterHtml = strippedGroup.get(i)[0].trim();
                         String encounterText = strippedGroup.get(i)[1].trim();
                         if (encounterText.isBlank()) continue;
-                        if (IGNORED_ENCOUNTERS.contains(encounterText) || IGNORED_ENCOUNTERS_STARTS_WITH.stream().anyMatch(encounterText::startsWith)) continue;
+                        if (IGNORED_ENCOUNTERS.contains(encounterText) ||
+                                IGNORED_ENCOUNTERS_STARTS_WITH.stream().anyMatch(encounterText::startsWith)) continue;
 
                         ParsedDetails details = parseEncounterDetails(cleanedTexts[i]);
                         String finalMethod = details.method() != null ? details.method() : groupMethod;
@@ -284,7 +638,8 @@ public class BulbapediaClient {
                         encounter.setEncounterHtml(encounterHtml);
                         encounter.setEncounterText(encounterText);
                         encounter.setCleanedUpEncounterText(cleanedTexts[i]);
-                        encounter.setLocation(details.location());
+                        // Use pattern-matched location if available, else fall back to the cleaned text
+                        encounter.setLocation(details.location() != null ? details.location() : cleanedTexts[i]);
                         encounter.setConditions(details.conditions());
                         encounter.setMethod(finalMethod);
                         encounter.setCatchRate(details.catchRate());
@@ -314,7 +669,6 @@ public class BulbapediaClient {
                 .collect(Collectors.toList());
     }
 
-    // Splits child nodes into br-separated groups, each group then comma-split into [html, text] pairs.
     private List<List<String[]>> splitByBrThenComma(Element element) {
         return splitNodesByBr(element).stream()
                 .map(this::commaSplitNodes)
@@ -322,7 +676,6 @@ public class BulbapediaClient {
                 .collect(Collectors.toList());
     }
 
-    // Groups the child nodes of an element by <br> boundaries.
     private List<List<Node>> splitNodesByBr(Element element) {
         List<List<Node>> groups = new ArrayList<>();
         List<Node> current = new ArrayList<>();
@@ -338,7 +691,6 @@ public class BulbapediaClient {
         return groups;
     }
 
-    // Comma-splits a list of nodes into [html, text] pairs.
     private List<String[]> commaSplitNodes(List<Node> nodes) {
         List<String[]> parts = new ArrayList<>();
         StringBuilder currentHtml = new StringBuilder();
@@ -373,8 +725,6 @@ public class BulbapediaClient {
         }
     }
 
-    // If the last comma-part ends with a known parenthetical method like "(Max Raid Battle)",
-    // returns that method name so it can be applied to all parts in the group.
     private static String extractGroupMethod(List<String[]> group) {
         if (group.isEmpty()) return null;
         String lastText = group.get(group.size() - 1)[1];
@@ -385,7 +735,6 @@ public class BulbapediaClient {
         return null;
     }
 
-    // Returns a copy of the group with the trailing parenthetical stripped from the last part.
     private static List<String[]> stripGroupMethod(List<String[]> group, String method) {
         if (method == null) return group;
         List<String[]> result = new ArrayList<>(group);
@@ -399,27 +748,33 @@ public class BulbapediaClient {
         return result;
     }
 
-    // Extracts structured encounter details from cleaned encounter text using pattern matching.
-    // Returns unknown() for bare location text that requires a location-page visit to classify.
+    // Extracts structured encounter details from cleaned encounter text.
+    // Returns unknown() for bare location text — Phase 2 enriches those from location pages.
     private static ParsedDetails parseEncounterDetails(String cleanedText) {
         String text = cleanedText.trim();
 
+        // 1. Island Scan: "Route 2 (Island Scan)Fr"
         Matcher islandScan = ISLAND_SCAN.matcher(text);
         if (islandScan.matches()) {
             String day = DAY_ABBREVIATIONS.getOrDefault(islandScan.group(2), islandScan.group(2));
             return new ParsedDetails("Island Scan", islandScan.group(1).trim(), List.of(day), 100);
         }
 
+        // 2. Trade: "Trade Abra on Route 2"
         Matcher trade = TRADE_PATTERN.matcher(text);
         if (trade.matches()) {
-            return new ParsedDetails("Trade", trade.group(2).trim(), List.of("Trade " + trade.group(1).trim()), 0);
+            return new ParsedDetails("Trade", trade.group(2).trim(),
+                    List.of("Trade " + trade.group(1).trim()), 0);
         }
 
+        // 3. Gift with "if" condition: "Received from ... in Location if condition"
         Matcher giftIf = GIFT_RECEIVED_IF.matcher(text);
         if (giftIf.matches()) {
-            return new ParsedDetails("Received as gift", giftIf.group(1).trim(), List.of(giftIf.group(2).trim()), 100);
+            return new ParsedDetails("Received as gift", giftIf.group(1).trim(),
+                    List.of(giftIf.group(2).trim()), 100);
         }
 
+        // 4. Gift with optional "after" condition: "Received from ... in Location [after condition]"
         Matcher giftAfter = GIFT_RECEIVED_FROM.matcher(text);
         if (giftAfter.matches()) {
             List<String> conditions = giftAfter.group(2) != null
@@ -428,33 +783,40 @@ public class BulbapediaClient {
             return new ParsedDetails("Received as gift", giftAfter.group(1).trim(), conditions, 100);
         }
 
+        // 5. First partner gift: "First partner Pokémon from ... in Location"
         Matcher firstPartner = GIFT_FIRST_PARTNER.matcher(text);
         if (firstPartner.matches()) {
-            return new ParsedDetails("Received as gift", firstPartner.group(1).trim(), Collections.emptyList(), 100);
+            return new ParsedDetails("Received as gift", firstPartner.group(1).trim(),
+                    Collections.emptyList(), 100);
+        }
+
+        // 6. Per-encounter parenthetical condition: "Cerulean City (Only one)"
+        //    Strip the parenthetical so Phase 2 can navigate to the correct page.
+        Matcher parenCond = PAREN_METHOD_SUFFIX.matcher(text);
+        if (parenCond.matches()) {
+            String location = parenCond.group(1).trim();
+            List<String> conditions = Arrays.stream(parenCond.group(2).split(";"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+            return new ParsedDetails(null, location, conditions, 0);
         }
 
         return ParsedDetails.unknown();
     }
 
-    // Produces a clean single location name from raw encounter text.
-    // previousLocationType carries the location prefix (e.g. "Route") forward so that bare
-    // numbers like "26" following "Routes 22" resolve to "Route 26".
     private static String computeCleanedEncounterText(String rawText, String previousLocationType) {
         String cleaned = rawText.trim();
 
-        // Strip leading "and " (e.g. " and 3" → "3")
         if (cleaned.toLowerCase().startsWith("and ")) {
             cleaned = cleaned.substring(4).trim();
         }
 
-        // Singularize common location plurals
         cleaned = cleaned.replaceAll("\\bRoutes\\b", "Route");
         cleaned = cleaned.replaceAll("\\bCaves\\b", "Cave");
         cleaned = cleaned.replaceAll("\\bTowns\\b", "Town");
         cleaned = cleaned.replaceAll("\\bCities\\b", "City");
 
-        // If only a bare number remains, prefix with the previous location type
-        // (e.g. "26" after "Route 22" → "Route 26")
         if (cleaned.matches("\\d+") && previousLocationType != null) {
             cleaned = previousLocationType + " " + cleaned;
         }
@@ -462,12 +824,12 @@ public class BulbapediaClient {
         return cleaned;
     }
 
-    // Extracts the location type prefix from a cleaned name so it can be passed as context.
-    // "Route 22" → "Route", "Kanto Route 22" → "Kanto Route", "Safari Zone" → null
     private static String extractLocationType(String cleanedText) {
         Matcher matcher = Pattern.compile("^(.+?)\\s+\\d+$").matcher(cleanedText.trim());
         return matcher.find() ? matcher.group(1) : null;
     }
+
+    // ── Records and enums ─────────────────────────────────────────────────────
 
     private record PokemonEntry(int dexNumber, String name, String pageTitle) {}
 
@@ -476,4 +838,8 @@ public class BulbapediaClient {
             return new ParsedDetails(null, null, null, 0);
         }
     }
+
+    private record LocationEncounterData(String method, int catchRate, List<String> conditions) {}
+
+    private enum ColumnFormat { SINGLE, DAY_NIGHT, MORNING_DAY_NIGHT, MORNING_DAY_EVENING_NIGHT, WEATHER }
 }

@@ -139,6 +139,9 @@ export default function PokemonGrid({pokemon, evolutionChains, games}: Props) {
                 <Search filters={filters} setFilters={setFilters} searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         selectedGame={selectedGame} setSelectedGame={setSelectedGame} games={games}/>
             </Box>
+            <Box>
+                {`Pokemon Owned: ${calculatedPokemon.filter(p => p.owned).length}/${pokemon.length} (${((calculatedPokemon.filter(p => p.owned).length/pokemon.length)*100).toFixed(2)}%)`}
+            </Box>
             {!hasResults && <Text alignSelf={"center"}>No results found - do you have any filters enabled?</Text>}
             {GenerationAccordion()}
         </>
