@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stacktobasics.pokemoncatchbackend.domain.encounter.Encounter;
 import com.stacktobasics.pokemoncatchbackend.domain.encounter.EncounterRepository;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -148,6 +150,8 @@ public class BulbapediaClient {
     private static final Pattern PAREN_METHOD_SUFFIX = Pattern.compile(
             "^(.*?)\\s*\\(([^)]+)\\)\\s*$");
 
+    private static final List<String> IGNORED_SUFFIXES = List.of("\\((FireRed|LeafGreen)\\)$");
+
     // ── Phase 2: location-page parsing ──────────────────────────────────────
 
     // Game name → Bulbapedia table column abbreviation. Clashes (R=Red/Ruby, S=Silver/Sun/Scarlet, etc.)
@@ -173,6 +177,7 @@ public class BulbapediaClient {
             Map.entry("Legends: Z-A", "ZA"), Map.entry("Mega Dimension", "MD")
     );
 
+    // TODO: Replace dual slot with walking
     // Image alt text in the Location cell → human-readable method name
     private static final Map<String, String> METHOD_ALT_TO_NAME = Map.ofEntries(
             Map.entry("Grass", "Walking"),
@@ -707,6 +712,80 @@ public class BulbapediaClient {
         return Optional.empty();
     }
 
+    record GroupEncounterDetails(String method, String location, List<String> conditions, int catchRate){}
+
+    private GroupEncounterDetails extractAndStripGroupedEncounterInfo(GroupedEncounters groupedEncounters) {
+        // Check first for special encounters
+        List<HtmlAndTextPair> encounters = groupedEncounters.encounters;
+        if(encounters.isEmpty()) return new GroupEncounterDetails(null, null, List.of(), 0);
+        var lastEncounterInGroup = encounters.get(encounters.size()-1);
+        Matcher islandScan = ISLAND_SCAN.matcher(lastEncounterInGroup.text);
+        if (islandScan.matches()) {
+            return new GroupEncounterDetails("Island Scan", islandScan.group(1).trim(), null, 100);
+        }
+
+        // Dual Slot required
+        Matcher dualSlot = DUAL_SLOT.matcher(lastEncounterInGroup.text);
+        if (dualSlot.matches()) {
+            return new GroupEncounterDetails("Walking", dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0);
+        }
+
+        List<String> conditions = new ArrayList<>();
+
+        // extract day conditions and add them
+        String lastText = lastEncounterInGroup.text;
+        if (lastEncounterInGroup.html.contains("/wiki/Days_of_the_week")) {
+            Matcher m = DAYS.matcher(lastText);
+            List<String> days = new ArrayList<>();
+            while (m.find()) {
+                days.add(m.group());
+            }
+            conditions.add(days.stream().map(d -> DAY_ABBREVIATIONS.getOrDefault(d, d)).collect(Collectors.joining(" or ")));
+            lastText = lastText.replaceFirst("(Mo|Tu|We|Th|Fr|Sa|Su)+$", "");
+        }
+        lastText = lastText.replaceAll("(Morning|Day)$", "").trim();
+
+        String method = null;
+        // extract group methods
+        Matcher m = PAREN_METHOD_SUFFIX.matcher(lastText);
+        if (m.matches() && GROUP_LEVEL_METHODS.contains(m.group(2))) {
+            method = m.group(2);
+            lastText = m.group(1).trim();
+        }
+
+        // remove known items (e.g. FireRed or LeafGreen)
+        for (String ignoredSuffix : IGNORED_SUFFIXES) {
+            lastText = lastText.replace(ignoredSuffix, "");        }
+
+
+        // log anything left here in parentheses
+        Matcher parenMatcher = PAREN_METHOD_SUFFIX.matcher(lastText);
+        if (parenMatcher.matches()) {
+            log.info("Found unexpected condition/method/info: {}", lastText);
+        }
+
+        encounters.remove(encounters.size()-1);
+        encounters.add(new HtmlAndTextPair(lastEncounterInGroup.html, lastText));
+
+        // clean up text with calculateCleanEncounterTexts(strippedGroup) and change text.
+        String[] cleanedTexts = new String[encounters.size()];
+        String previousLocationType = null;
+        for (int i = 0; i < encounters.size(); i++) {
+            cleanedTexts[i] = computeCleanedEncounterText(encounters.get(i).text, previousLocationType);
+            String newType = extractLocationType(cleanedTexts[i]);
+            if (newType != null) previousLocationType = newType;
+        }
+
+        List<HtmlAndTextPair> newPairs = new ArrayList<>();
+        for (int i = 0; i < encounters.size(); i++) {
+            HtmlAndTextPair existingEncounter = encounters.get(i);
+            newPairs.add(new HtmlAndTextPair(existingEncounter.html, cleanedTexts[i]));
+        }
+        groupedEncounters.encounters = newPairs;
+
+        return new GroupEncounterDetails(method, null, conditions, 0);
+    }
+
     private List<Encounter> parseGameLocationsHtml(String html, PokemonEntry entry) {
         List<Encounter> encounters = new ArrayList<>();
         Document doc = Jsoup.parse(html);
@@ -741,12 +820,17 @@ public class BulbapediaClient {
             List<String> matchedGames = findMatchingGames(gameNames);
             if (matchedGames.isEmpty()) continue;
 
-            List<List<String[]>> brGroups = splitByBrThenComma(contentCell);
+            EncounterGroupsForLocation encounterGroupsForLocation = getGroupedEncountersForLocationFromElement(contentCell);
 
             for (String game : matchedGames) {
-                for (List<String[]> group : brGroups) {
-                    String groupDayConditions = extractGroupDayConditions(group);
-                    List<String[]> strippedGroupOfDayConditions = stripDayInfo(group, groupDayConditions);
+                for (GroupedEncounters groupedEncounters : encounterGroupsForLocation.groups) {
+                    //  Extract out special encounter information from group (island scan, etc.)
+                    // Extract out groups and conditions
+
+                    // Try out new extractAndStripGroupedEncounterInfo method
+
+                    String groupDayConditions = extractGroupDayConditions(groupedEncounters);
+                    List<String[]> strippedGroupOfDayConditions = stripDayInfo(groupedEncounters, groupDayConditions);
                     String groupMethod = extractGroupMethod(strippedGroupOfDayConditions);
                     List<String[]> strippedGroup = stripGroupMethod(strippedGroupOfDayConditions, groupMethod);
                     String[] cleanedTexts = calculateCleanEncounterTexts(strippedGroup);
@@ -827,11 +911,22 @@ public class BulbapediaClient {
                 .collect(Collectors.toList());
     }
 
-    private List<List<String[]>> splitByBrThenComma(Element element) {
-        return splitNodesByBr(element).stream()
+    record HtmlAndTextPair(String html, String text) {}
+
+    @Data
+    @AllArgsConstructor
+    static
+    class GroupedEncounters {
+        private List<HtmlAndTextPair> encounters;
+    }
+    record EncounterGroupsForLocation(List<GroupedEncounters> groups) {}
+
+    private EncounterGroupsForLocation getGroupedEncountersForLocationFromElement(Element element) {
+        return new EncounterGroupsForLocation(splitNodesByBr(element).stream()
                 .map(this::commaOrAndSplitNodes)
                 .filter(group -> !group.isEmpty())
-                .collect(Collectors.toList());
+                .map(GroupedEncounters::new)
+                .collect(Collectors.toList()));
     }
 
     private List<List<Node>> splitNodesByBr(Element element) {
@@ -849,7 +944,7 @@ public class BulbapediaClient {
         return groups;
     }
 
-    private List<String[]> commaOrAndSplitNodes(List<Node> nodes) {
+    private List<HtmlAndTextPair> commaOrAndSplitNodes(List<Node> nodes) {
         List<String[]> parts = new ArrayList<>();
         StringBuilder currentHtml = new StringBuilder();
         StringBuilder currentText = new StringBuilder();
@@ -873,7 +968,7 @@ public class BulbapediaClient {
             }
         }
         flushSegment(parts, currentHtml, currentText);
-        return parts;
+        return parts.stream().map(p -> new HtmlAndTextPair(p[0], p[1])).toList();
     }
 
     private void flushSegment(List<String[]> parts, StringBuilder html, StringBuilder text) {
@@ -911,12 +1006,6 @@ public class BulbapediaClient {
     private static ParsedDetails parseEncounterDetails(String cleanedText) {
         String text = cleanedText.trim();
 
-        // 1. Island Scan: "Route 2 (Island Scan)Fr"
-        Matcher islandScan = ISLAND_SCAN.matcher(text);
-        if (islandScan.matches()) {
-            return new ParsedDetails("Island Scan", islandScan.group(1).trim(), null, 100);
-        }
-
         // 2. Trade: "Trade Abra on Route 2"
         Matcher trade = TRADE_PATTERN.matcher(text);
         if (trade.matches()) {
@@ -945,12 +1034,6 @@ public class BulbapediaClient {
         if (firstPartner.matches()) {
             return new ParsedDetails("Received as gift", firstPartner.group(1).trim(),
                     Collections.emptyList(), 100);
-        }
-
-        // Dual Slot required
-        Matcher dualSlot = DUAL_SLOT.matcher(text);
-        if (dualSlot.matches()) {
-            return new ParsedDetails(null, dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0);
         }
 
         // 6. Per-encounter parenthetical condition: "Cerulean City (Only one)"
