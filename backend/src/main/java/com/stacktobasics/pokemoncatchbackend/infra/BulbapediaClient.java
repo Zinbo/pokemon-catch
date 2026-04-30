@@ -12,6 +12,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -27,10 +28,10 @@ public class BulbapediaClient {
 
     // Cases to handle:
     // Grand Underground - Grassland Cave, Sunlit Cavern, Swampy Cave, Riverbank Cave, Still-Water Cavern, Bogsunk Cavern (after obtaining the National Pokédex) - Bulbasaur
-    //  Gold doesn't have the catch rate and method set for routes.
     // Need to print out all of those records which at the end don't have any method (and later catch rate)
-    // Finding walking-morning-31 for Caterpie on Route 2 twice
-    // National park and ilex forest are all messed up
+    // Need to combine parseEncounterDetails and properly extract group methods and conditions, e.g. dual slot firered should be a condition
+    // Combine calls and do both at same time
+    // cache calls, so not getting location pages loads of times.
 
     private static final String ALL_POKEMON_PAGE = "List_of_Pokémon_by_National_Pokédex_number";
     private static final String BASE_URL = "https://bulbapedia.bulbagarden.net/w/api.php";
@@ -45,20 +46,73 @@ public class BulbapediaClient {
             "Sword", "Shield", "Expansion Pass", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus",
             "Scarlet", "Violet", "Legends: Z-A", "Mega Dimension");
 
-    private static final Map<Integer, List<String>> GenerationsToGames = Map.of(
-            1, List.of("Red", "Blue", "Yellow"),
-            2, List.of("Gold", "Silver", "Crystal"),
-            3, List.of("Ruby", "Sapphire", "Emerald", "FireRed", "LeafGreen"),
-            4, List.of("Diamond", "Pearl", "Platinum", "HeartGold", "SoulSilver"),
-            5, List.of("Black", "White", "Black 2", "White 2"),
-            6, List.of("X", "Y", "Omega Ruby", "Alpha Sapphire"),
-            7, List.of("Sun", "Moon", "Ultra Sun", "Ultra Moon", "Let's Go Pikachu", "Let's Go Eevee"),
-            8, List.of("Sword", "Shield", "Expansion Pass", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus"),
-            9, List.of("Scarlet", "Violet", "Legends: Z-A", "Mega Dimension")
+    private static final Map<String, List<String>> GenerationsToGames = Map.of(
+            "I", List.of("Red", "Blue", "Yellow"),
+            "II", List.of("Gold", "Silver", "Crystal"),
+            "III", List.of("Ruby", "Sapphire", "Emerald", "FireRed", "LeafGreen"),
+            "IV", List.of("Diamond", "Pearl", "Platinum", "HeartGold", "SoulSilver"),
+            "V", List.of("Black", "White", "Black 2", "White 2"),
+            "VI", List.of("X", "Y", "Omega Ruby", "Alpha Sapphire"),
+            "VII", List.of("Sun", "Moon", "Ultra Sun", "Ultra Moon", "Let's Go Pikachu", "Let's Go Eevee"),
+            "VIII", List.of("Sword", "Shield", "Expansion Pass", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus"),
+            "IX", List.of("Scarlet", "Violet", "Legends: Z-A", "Mega Dimension")
+    );
+
+    private static final Map<String, String> GameToGeneration = Map.ofEntries(
+            Map.entry("Red", "I"),
+            Map.entry("Blue", "I"),
+            Map.entry("Yellow", "I"),
+
+            Map.entry("Gold", "II"),
+            Map.entry("Silver", "II"),
+            Map.entry("Crystal", "II"),
+
+            Map.entry("Ruby", "III"),
+            Map.entry("Sapphire", "III"),
+            Map.entry("Emerald", "III"),
+            Map.entry("FireRed", "III"),
+            Map.entry("LeafGreen", "III"),
+
+            Map.entry("Diamond", "IV"),
+            Map.entry("Pearl", "IV"),
+            Map.entry("Platinum", "IV"),
+            Map.entry("HeartGold", "IV"),
+            Map.entry("SoulSilver", "IV"),
+
+            Map.entry("Black", "V"),
+            Map.entry("White", "V"),
+            Map.entry("Black 2", "V"),
+            Map.entry("White 2", "V"),
+
+            Map.entry("X", "VI"),
+            Map.entry("Y", "VI"),
+            Map.entry("Omega Ruby", "VI"),
+            Map.entry("Alpha Sapphire", "VI"),
+
+            Map.entry("Sun", "VII"),
+            Map.entry("Moon", "VII"),
+            Map.entry("Ultra Sun", "VII"),
+            Map.entry("Ultra Moon", "VII"),
+            Map.entry("Let's Go Pikachu", "VII"),
+            Map.entry("Let's Go Eevee", "VII"),
+
+            Map.entry("Sword", "VIII"),
+            Map.entry("Shield", "VIII"),
+            Map.entry("Expansion Pass", "VIII"),
+            Map.entry("Brilliant Diamond", "VIII"),
+            Map.entry("Shining Pearl", "VIII"),
+            Map.entry("Legends: Arceus", "VIII"),
+
+            Map.entry("Scarlet", "IX"),
+            Map.entry("Violet", "IX"),
+            Map.entry("Legends: Z-A", "IX"),
+            Map.entry("Mega Dimension", "IX")
     );
 
     private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event", "Unobtainable");
     private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari");
+
+    private static final List<String> METHODS_WITH_SPECIFIC_TABLE_LOCATIONS = List.of("Bug-Catching Contest");
 
     // ── Phase 1: text-pattern matching for known encounter types ─────────────
 
@@ -68,7 +122,7 @@ public class BulbapediaClient {
     );
 
     private static final Set<String> GROUP_LEVEL_METHODS = Set.of(
-            "Max Raid Battle", "Tera Raid Battle", "Dynamax Adventure"
+            "Max Raid Battle", "Tera Raid Battle", "Dynamax Adventure", "Bug-Catching Contest"
     );
 
     private static final Pattern GIFT_FIRST_PARTNER = Pattern.compile(
@@ -81,7 +135,9 @@ public class BulbapediaClient {
             "^Received from .+? in (.+?)(?:\\s+after (.+))?$", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern ISLAND_SCAN = Pattern.compile(
-            "^(.+?)\\s*\\(Island Scan\\)(Mo|Tu|We|Th|Fr|Sa|Su)$", Pattern.CASE_INSENSITIVE);
+            "^(.+?)\\s*\\(Island Scan\\)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern DUAL_SLOT = Pattern.compile("^(.+?)\\s*\\((FireRed|LeafGreen)\\)$", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern DAYS = Pattern.compile(
             "(Mo|Tu|We|Th|Fr|Sa|Su)"
@@ -97,23 +153,23 @@ public class BulbapediaClient {
     // Game name → Bulbapedia table column abbreviation. Clashes (R=Red/Ruby, S=Silver/Sun/Scarlet, etc.)
     // are safe because location pages are region-specific: a Kanto page never has a Hoenn Gen 3 table.
     private static final Map<String, String> GAME_TO_ABBREVIATION = Map.ofEntries(
-            Map.entry("Red", "R"),           Map.entry("Blue", "B"),          Map.entry("Yellow", "Y"),
-            Map.entry("Gold", "G"),          Map.entry("Silver", "S"),         Map.entry("Crystal", "C"),
-            Map.entry("Ruby", "R"),          Map.entry("Sapphire", "S"),       Map.entry("Emerald", "E"),
-            Map.entry("FireRed", "FR"),      Map.entry("LeafGreen", "LG"),
-            Map.entry("Diamond", "D"),       Map.entry("Pearl", "P"),          Map.entry("Platinum", "Pt"),
-            Map.entry("HeartGold", "HG"),    Map.entry("SoulSilver", "SS"),
-            Map.entry("Black", "B"),         Map.entry("White", "W"),
-            Map.entry("Black 2", "B2"),      Map.entry("White 2", "W2"),
-            Map.entry("X", "X"),             Map.entry("Y", "Y"),
-            Map.entry("Omega Ruby", "OR"),   Map.entry("Alpha Sapphire", "AS"),
-            Map.entry("Sun", "S"),           Map.entry("Moon", "M"),
-            Map.entry("Ultra Sun", "US"),    Map.entry("Ultra Moon", "UM"),
+            Map.entry("Red", "R"), Map.entry("Blue", "B"), Map.entry("Yellow", "Y"),
+            Map.entry("Gold", "G"), Map.entry("Silver", "S"), Map.entry("Crystal", "C"),
+            Map.entry("Ruby", "R"), Map.entry("Sapphire", "S"), Map.entry("Emerald", "E"),
+            Map.entry("FireRed", "FR"), Map.entry("LeafGreen", "LG"),
+            Map.entry("Diamond", "D"), Map.entry("Pearl", "P"), Map.entry("Platinum", "Pt"),
+            Map.entry("HeartGold", "HG"), Map.entry("SoulSilver", "SS"),
+            Map.entry("Black", "B"), Map.entry("White", "W"),
+            Map.entry("Black 2", "B2"), Map.entry("White 2", "W2"),
+            Map.entry("X", "X"), Map.entry("Y", "Y"),
+            Map.entry("Omega Ruby", "OR"), Map.entry("Alpha Sapphire", "AS"),
+            Map.entry("Sun", "S"), Map.entry("Moon", "M"),
+            Map.entry("Ultra Sun", "US"), Map.entry("Ultra Moon", "UM"),
             Map.entry("Let's Go Pikachu", "P"), Map.entry("Let's Go Eevee", "E"),
-            Map.entry("Sword", "Sw"),        Map.entry("Shield", "Sh"),        Map.entry("Expansion Pass", "SwSh"),
+            Map.entry("Sword", "Sw"), Map.entry("Shield", "Sh"), Map.entry("Expansion Pass", "SwSh"),
             Map.entry("Brilliant Diamond", "BD"), Map.entry("Shining Pearl", "SP"),
             Map.entry("Legends: Arceus", "LA"),
-            Map.entry("Scarlet", "S"),       Map.entry("Violet", "V"),
+            Map.entry("Scarlet", "S"), Map.entry("Violet", "V"),
             Map.entry("Legends: Z-A", "ZA"), Map.entry("Mega Dimension", "MD")
     );
 
@@ -122,9 +178,9 @@ public class BulbapediaClient {
             Map.entry("Grass", "Walking"),
             Map.entry("Tall grass", "Walking"),
             Map.entry("Surfing", "Surfing"),
-            Map.entry("Old Rod", "Old Rod"),
-            Map.entry("Good Rod", "Good Rod"),
-            Map.entry("Super Rod", "Super Rod"),
+            Map.entry("Old Rod", "Fishing - Old Rod"),
+            Map.entry("Good Rod", "Fishing - Good Rod"),
+            Map.entry("Super Rod", "Fishing - Super Rod"),
             Map.entry("Headbutt", "Headbutt"),
             Map.entry("Dark grass", "Dark Grass"),
             Map.entry("Rustling grass", "Rustling Grass"),
@@ -140,6 +196,8 @@ public class BulbapediaClient {
     // td background-color → condition label. Used to identify time-of-day and weather rate cells.
     // Colors are lower-cased for case-insensitive matching against style attribute values.
     private static final Map<String, String> CONDITION_CELL_COLORS = new LinkedHashMap<>();
+    public static final String STYLE_OF_POKEMON_ROW = "text-align:center;";
+
     static {
         // Time-of-day (Gen 2, 4, 7, 8 BDSP)
         CONDITION_CELL_COLORS.put("#a5dfec", "Morning");
@@ -236,7 +294,7 @@ public class BulbapediaClient {
     // ── Phase 2: enrich encounters from location pages ────────────────────────
 
     public void enrichEncountersFromLocationPages() {
-        List<Encounter> toEnrich = encounterRepository.findByMethodIsNull();
+        List<Encounter> toEnrich = encounterRepository.findByMethodIsNullOrCatchRate(0);
         log.info("Enriching {} encounters from location pages", toEnrich.size());
 
         // Group by page title to fetch each location page only once
@@ -257,7 +315,7 @@ public class BulbapediaClient {
                 }
 
                 for (Encounter enc : entry.getValue()) {
-                    List<LocationEncounterData> results = parseLocationSection(html, enc.getPokemonName(), enc.getGame(), enc.getLocation());
+                    List<LocationEncounterData> results = parseLocationSection(html, enc.getPokemonName(), enc.getGame(), enc.getLocation(), enc.getMethod());
                     if (results.isEmpty()) {
                         log.debug("No encounter data found for {} at {} ({})", enc.getPokemonName(), pageTitle, enc.getGame());
                         continue;
@@ -279,7 +337,7 @@ public class BulbapediaClient {
                 log.warn("Interrupted during location enrichment, stopping");
                 return;
             } catch (Exception e) {
-                log.error("Failed to enrich from page {}: {}", pageTitle, e.getMessage());
+                log.error("Failed to enrich from page {}: {}", pageTitle, e.getMessage(), e);
             }
         }
     }
@@ -339,28 +397,32 @@ public class BulbapediaClient {
 
     // Parses a location page's Pokémon section HTML, returning encounter data for the given
     // Pokémon and game. Returns one entry per time/weather slot where encounter rate > 0.
-    private static List<LocationEncounterData> parseLocationSection(String html, String pokemonName, String game, String location) {
+    private static List<LocationEncounterData> parseLocationSection(String html, String pokemonName, String game, String location, String method) {
         Document doc = Jsoup.parse(html);
         String abbreviation = GAME_TO_ABBREVIATION.getOrDefault(game, game);
         List<LocationEncounterData> results = new ArrayList<>();
 
-        // Track current h4 header for Gen 8 Wild Area sections ("Hidden encounters", "Visible encounters", "Wanderers")
-        String currentSectionMethod = null;
+        var pokemonHeading = doc.selectFirst("span#Pokémon");
+        if(pokemonHeading == null) return List.of();
+        Element genHeading = pokemonHeading.nextElementSibling();
+        while (genHeading != null && genHeading.selectFirst("span[id^='Generation_" + GameToGeneration.get(game) + "']") == null) {
+            genHeading = genHeading.nextElementSibling();
+        }
 
-        for (Element element : doc.select("h4, table")) {
-            if ("h4".equals(element.tagName())) {
-                currentSectionMethod = sectionHeaderToMethod(element.text().trim());
-                continue;
-            }
+        var previousElement = genHeading != null ? genHeading : pokemonHeading;
+        Element table = previousElement.nextElementSibling();
+        while (table != null && !table.tagName().equals("table")) {
+            table = table.nextElementSibling();
+        }
 
-            // Table element
-            if (!elementHasGameRowSelected(element, abbreviation)) continue;
+        if (table == null) return List.of();
 
-            ColumnFormat format = detectColumnFormat(element);
-            List<Element> rows = findPokemonRows(element, pokemonName, abbreviation, location);
-            for (Element row : rows) {
-                results.addAll(extractFromRow(row, format, currentSectionMethod));
-            }
+        if (!elementHasGameRowSelected(table, abbreviation)) return List.of();
+
+        ColumnFormat format = detectColumnFormat(table);
+        List<Element> rows = findPokemonRows(table, pokemonName, abbreviation, location, method);
+        for (Element row : rows) {
+            results.addAll(extractFromRow(row, format, method));
         }
 
 
@@ -371,7 +433,8 @@ public class BulbapediaClient {
 
     private static List<LocationEncounterData> resultsWithDuplicatesRemoved(List<LocationEncounterData> results) {
         // Remove any duplicates, take the highest catch rate if there are duplicates
-        record MethodAndConditions(String method, List<String> conditions){}
+        record MethodAndConditions(String method, List<String> conditions) {
+        }
         Set<MethodAndConditions> seenEntries = new HashSet<>();
         return results.stream().filter(r -> {
             MethodAndConditions methodAndConditions = new MethodAndConditions(r.method, r.conditions);
@@ -384,10 +447,10 @@ public class BulbapediaClient {
     // Maps Gen 8 Wild Area h4 section headers to method names.
     private static String sectionHeaderToMethod(String headerText) {
         return switch (headerText) {
-            case "Hidden encounters"  -> "Walking (Hidden)";
+            case "Hidden encounters" -> "Walking (Hidden)";
             case "Visible encounters" -> "Walking (Overworld)";
-            case "Wanderers"          -> "Wanderer";
-            default                   -> null;
+            case "Wanderers" -> "Wanderer";
+            default -> null;
         };
     }
 
@@ -399,7 +462,7 @@ public class BulbapediaClient {
             if (!isForRightGame) continue;
             var styleComponents = th.attr("style").split(":");
             var hasColouredBackground = styleComponents.length == 2 && !styleComponents[1].startsWith("#FFF");
-            if(hasColouredBackground) return true;
+            if (hasColouredBackground) return true;
         }
         return false;
     }
@@ -410,44 +473,66 @@ public class BulbapediaClient {
         Set<String> weatherAlts = new HashSet<>();
         for (Element img : table.select("th img")) {
             String alt = img.attr("alt");
-            if (TIME_CONDITION_ALTS.contains(alt))    timeAlts.add(alt);
+            if (TIME_CONDITION_ALTS.contains(alt)) timeAlts.add(alt);
             if (WEATHER_CONDITION_ALTS.contains(alt)) weatherAlts.add(alt);
         }
-        if (!weatherAlts.isEmpty())            return ColumnFormat.WEATHER;
-        if (timeAlts.contains("Evening"))      return ColumnFormat.MORNING_DAY_EVENING_NIGHT;
-        if (timeAlts.contains("Morning"))      return ColumnFormat.MORNING_DAY_NIGHT;
-        if (timeAlts.contains("Night"))        return ColumnFormat.DAY_NIGHT;
+        if (!weatherAlts.isEmpty()) return ColumnFormat.WEATHER;
+        if (timeAlts.contains("Evening")) return ColumnFormat.MORNING_DAY_EVENING_NIGHT;
+        if (timeAlts.contains("Morning")) return ColumnFormat.MORNING_DAY_NIGHT;
+        if (timeAlts.contains("Night")) return ColumnFormat.DAY_NIGHT;
         return ColumnFormat.SINGLE;
     }
 
     // Finds all data rows in a table that contain a link for the given Pokémon.
-    private static List<Element> findPokemonRows(Element table, String pokemonName, String gameAbbreviation, String location) {
-        List<Element> rows = new ArrayList<>();
-        String targetTitle = pokemonName + " (Pokémon)";
-        for (Element row : table.select("tr")) {
-            boolean found = row.select("a").stream()
-                    .anyMatch(a -> targetTitle.equals(a.attr("title")));
+    private static List<Element> findPokemonRows(Element table, String pokemonName, String gameAbbreviation, String location, String method) {
+        Elements rows = Optional.ofNullable(table.selectFirst("tbody")).map(Element::children).orElse(new Elements());
+        if (rows.isEmpty()) return Collections.emptyList();
 
-            // also do check that it contains a th with the game abbreviation and background
-            if (found && elementHasGameRowSelected(row, gameAbbreviation)) {
-                log.info("Found match for pokemon {} for game {} and location: {}: {}", pokemonName, gameAbbreviation, location, row.html());
-                rows.add(row);
+        String targetTitle = pokemonName + " (Pokémon)";
+        Map<String, List<Element>> subTablesToRows = new HashMap<>();
+        String previouslySeenHeading = null;
+        for (Element row : rows) {
+            String style = row.attr("style");
+            if (STYLE_OF_POKEMON_ROW.equals(style)) {
+                if (row.select("a").stream()
+                        .anyMatch(a -> targetTitle.equals(a.attr("title"))) && elementHasGameRowSelected(row, gameAbbreviation)) {
+                    subTablesToRows.getOrDefault(previouslySeenHeading, new ArrayList<>()).add(row);
+                }
+            } else {
+                previouslySeenHeading = row.text().trim();
+                subTablesToRows.put(previouslySeenHeading, subTablesToRows.getOrDefault(previouslySeenHeading, new ArrayList<>()));
             }
         }
-        return rows;
+
+        List<Element> results = new ArrayList<>();
+        subTablesToRows.forEach((heading, value) -> {
+            if ((method != null && METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(method) && METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(heading)) ||
+                    ((method == null || !METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(method)) && !METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(heading))){
+                value.forEach(row -> {
+                        log.info("Found match for pokemon {} for game {} and location: {}: {}", pokemonName, gameAbbreviation, location, row.html());
+                        results.add(row);
+                });
+
+            }
+        });
+
+        return results;
     }
 
     // Extracts encounter data from a single table row, returning one entry per non-zero rate slot.
     private static List<LocationEncounterData> extractFromRow(Element row, ColumnFormat format, String sectionMethod) {
         // Method: prefer the icon alt text in the row; fall back to the section header
-        String method = sectionMethod;
-        for (Element img : row.select("img")) {
-            String alt = img.attr("alt");
-            if (METHOD_ALT_TO_NAME.containsKey(alt)) {
-                method = METHOD_ALT_TO_NAME.get(alt);
-                break;
+        var method = Optional.ofNullable(sectionMethod).orElseGet(() -> {
+
+            for (Element img : row.select("img")) {
+                String alt = img.attr("alt");
+                if (METHOD_ALT_TO_NAME.containsKey(alt)) {
+                    return METHOD_ALT_TO_NAME.get(alt);
+                }
             }
-        }
+            return null;
+        });
+
 
         return extractEncountersFromRow(row, format, method);
     }
@@ -456,7 +541,7 @@ public class BulbapediaClient {
         if (format == ColumnFormat.SINGLE) return getEncountersForSingleCatchRateRow(row, method);
 
         List<LocationEncounterData> multicolumnFormatRows = getEncountersForMultiColumnCatchRate(row, method);
-        if(!multicolumnFormatRows.isEmpty()) return multicolumnFormatRows;
+        if (!multicolumnFormatRows.isEmpty()) return multicolumnFormatRows;
         return getEncountersForSingleCatchRateRow(row, method);
     }
 
@@ -497,7 +582,8 @@ public class BulbapediaClient {
         if (text.endsWith("%")) {
             try {
                 return Integer.parseInt(text.substring(0, text.length() - 1).trim());
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         return 0;
     }
@@ -542,7 +628,7 @@ public class BulbapediaClient {
         return merged;
     }
 
-    // ── Internal Phase 1 helpers ──────────────────────────────────────────────
+// ── Internal Phase 1 helpers ──────────────────────────────────────────────
 
     private List<PokemonEntry> getPokemonList() throws Exception {
         String url = BASE_URL + "?action=parse&format=json&prop=text&page=" + ALL_POKEMON_PAGE;
@@ -660,7 +746,7 @@ public class BulbapediaClient {
             for (String game : matchedGames) {
                 for (List<String[]> group : brGroups) {
                     String groupDayConditions = extractGroupDayConditions(group);
-                    List<String[]> strippedGroupOfDayConditions = stripGroupDayConditions(group, groupDayConditions);
+                    List<String[]> strippedGroupOfDayConditions = stripDayInfo(group, groupDayConditions);
                     String groupMethod = extractGroupMethod(strippedGroupOfDayConditions);
                     List<String[]> strippedGroup = stripGroupMethod(strippedGroupOfDayConditions, groupMethod);
                     String[] cleanedTexts = calculateCleanEncounterTexts(strippedGroup);
@@ -685,7 +771,8 @@ public class BulbapediaClient {
                         encounter.setCleanedUpEncounterText(cleanedTexts[i]);
                         // Use pattern-matched location if available, else fall back to the cleaned text
                         encounter.setLocation(details.location() != null ? details.location() : cleanedTexts[i]);
-                        encounter.setConditions(Stream.concat(Optional.ofNullable(details.conditions()).stream().flatMap(c -> c.stream()), Stream.of(groupDayConditions)).toList());
+                        var conditions = Stream.concat(Optional.ofNullable(details.conditions()).stream().flatMap(Collection::stream), StringUtils.hasText(groupDayConditions) ? Stream.of(groupDayConditions) : Stream.empty()).toList();
+                        encounter.setConditions(conditions);
                         encounter.setMethod(finalMethod);
                         encounter.setCatchRate(details.catchRate());
                         encounters.add(encounter);
@@ -697,11 +784,15 @@ public class BulbapediaClient {
         return encounters;
     }
 
-    private List<String[]> stripGroupDayConditions(List<String[]> group, String groupDayConditions) {
-        if (groupDayConditions == null) return group;
+    private List<String[]> stripDayInfo(List<String[]> group, String groupDayConditions) {
         List<String[]> result = new ArrayList<>(group);
+        if (groupDayConditions != null) {
+            String[] last = result.get(result.size() - 1);
+            result.set(result.size() - 1, new String[]{last[0], last[1].replaceFirst("(Mo|Tu|We|Th|Fr|Sa|Su)+$", "")});
+        }
         String[] last = result.get(result.size() - 1);
-        result.set(result.size() - 1, new String[]{last[0], last[1].replaceFirst("(Mo|Tu|We|Th|Fr|Sa|Su)+$", "")});
+        result.set(result.size() - 1, new String[]{last[0], last[1].replaceAll("(Morning|Day)$", "")});
+
         return result;
     }
 
@@ -709,7 +800,7 @@ public class BulbapediaClient {
         if (group.isEmpty()) return null;
         var lastEntry = group.get(group.size() - 1);
         var lastHtml = lastEntry[0];
-        if(!lastHtml.contains("/wiki/Days_of_the_week")) return null;
+        if (!lastHtml.contains("/wiki/Days_of_the_week")) return null;
 
         Matcher m = DAYS.matcher(lastEntry[1]);
         List<String> days = new ArrayList<>();
@@ -816,22 +907,21 @@ public class BulbapediaClient {
     }
 
     // Extracts structured encounter details from cleaned encounter text.
-    // Returns unknown() for bare location text — Phase 2 enriches those from location pages.
+// Returns unknown() for bare location text — Phase 2 enriches those from location pages.
     private static ParsedDetails parseEncounterDetails(String cleanedText) {
         String text = cleanedText.trim();
 
         // 1. Island Scan: "Route 2 (Island Scan)Fr"
         Matcher islandScan = ISLAND_SCAN.matcher(text);
         if (islandScan.matches()) {
-            String day = DAY_ABBREVIATIONS.getOrDefault(islandScan.group(2), islandScan.group(2));
-            return new ParsedDetails("Island Scan", islandScan.group(1).trim(), List.of(day), 100);
+            return new ParsedDetails("Island Scan", islandScan.group(1).trim(), null, 100);
         }
 
         // 2. Trade: "Trade Abra on Route 2"
         Matcher trade = TRADE_PATTERN.matcher(text);
         if (trade.matches()) {
             return new ParsedDetails("Trade", trade.group(2).trim(),
-                    List.of("Trade " + trade.group(1).trim()), 0);
+                    List.of("Trade " + trade.group(1).trim()), 100);
         }
 
         // 3. Gift with "if" condition: "Received from ... in Location if condition"
@@ -855,6 +945,12 @@ public class BulbapediaClient {
         if (firstPartner.matches()) {
             return new ParsedDetails("Received as gift", firstPartner.group(1).trim(),
                     Collections.emptyList(), 100);
+        }
+
+        // Dual Slot required
+        Matcher dualSlot = DUAL_SLOT.matcher(text);
+        if (dualSlot.matches()) {
+            return new ParsedDetails(null, dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0);
         }
 
         // 6. Per-encounter parenthetical condition: "Cerulean City (Only one)"
@@ -896,9 +992,10 @@ public class BulbapediaClient {
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    // ── Records and enums ─────────────────────────────────────────────────────
+// ── Records and enums ─────────────────────────────────────────────────────
 
-    private record PokemonEntry(int dexNumber, String name, String pageTitle) {}
+    private record PokemonEntry(int dexNumber, String name, String pageTitle) {
+    }
 
     private record ParsedDetails(String method, String location, List<String> conditions, int catchRate) {
         static ParsedDetails unknown() {
@@ -906,8 +1003,9 @@ public class BulbapediaClient {
         }
     }
 
-    private record LocationEncounterData(String method, int catchRate, List<String> conditions) {}
+    private record LocationEncounterData(String method, int catchRate, List<String> conditions) {
+    }
 
 
-    private enum ColumnFormat { SINGLE, DAY_NIGHT, MORNING_DAY_NIGHT, MORNING_DAY_EVENING_NIGHT, WEATHER }
+    private enum ColumnFormat {SINGLE, DAY_NIGHT, MORNING_DAY_NIGHT, MORNING_DAY_EVENING_NIGHT, WEATHER}
 }

@@ -6,5 +6,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface EncounterRepository extends CrudRepository<Encounter, UUID> {
-    List<Encounter> findByMethodIsNull();
+    List<Encounter> findByMethodIsNullOrCatchRate(int catchRate);
 }
