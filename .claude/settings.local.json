@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.serebii.net)",
+      "Bash(xargs grep:*)",
+      "WebFetch(domain:bulbapedia.bulbagarden.net)",
+      "Bash(mvn compile *)",
+      "PowerShell(Get-Command *)"
+    ]
+  }
+}
