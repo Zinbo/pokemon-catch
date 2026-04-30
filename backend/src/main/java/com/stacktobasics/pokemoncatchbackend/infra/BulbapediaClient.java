@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 @Slf4j
@@ -26,7 +27,10 @@ public class BulbapediaClient {
 
     // Cases to handle:
     // Grand Underground - Grassland Cave, Sunlit Cavern, Swampy Cave, Riverbank Cave, Still-Water Cavern, Bogsunk Cavern (after obtaining the National Pokédex) - Bulbasaur
-    // Can't find catch rates or method for caterpie, route 2
+    //  Gold doesn't have the catch rate and method set for routes.
+    // Need to print out all of those records which at the end don't have any method (and later catch rate)
+    // Finding walking-morning-31 for Caterpie on Route 2 twice
+    // National park and ilex forest are all messed up
 
     private static final String ALL_POKEMON_PAGE = "List_of_Pokémon_by_National_Pokédex_number";
     private static final String BASE_URL = "https://bulbapedia.bulbagarden.net/w/api.php";
@@ -79,6 +83,9 @@ public class BulbapediaClient {
     private static final Pattern ISLAND_SCAN = Pattern.compile(
             "^(.+?)\\s*\\(Island Scan\\)(Mo|Tu|We|Th|Fr|Sa|Su)$", Pattern.CASE_INSENSITIVE);
 
+    private static final Pattern DAYS = Pattern.compile(
+            "(Mo|Tu|We|Th|Fr|Sa|Su)"
+    );
     private static final Pattern TRADE_PATTERN = Pattern.compile(
             "^Trade (.+?) on (.+?)$", Pattern.CASE_INSENSITIVE);
 
@@ -350,12 +357,28 @@ public class BulbapediaClient {
             if (!elementHasGameRowSelected(element, abbreviation)) continue;
 
             ColumnFormat format = detectColumnFormat(element);
-            for (Element row : findPokemonRows(element, pokemonName, abbreviation, location)) {
+            List<Element> rows = findPokemonRows(element, pokemonName, abbreviation, location);
+            for (Element row : rows) {
                 results.addAll(extractFromRow(row, format, currentSectionMethod));
             }
         }
 
-        return results;
+
+        results.sort(Comparator.comparing(LocationEncounterData::catchRate).reversed());
+
+        return resultsWithDuplicatesRemoved(results);
+    }
+
+    private static List<LocationEncounterData> resultsWithDuplicatesRemoved(List<LocationEncounterData> results) {
+        // Remove any duplicates, take the highest catch rate if there are duplicates
+        record MethodAndConditions(String method, List<String> conditions){}
+        Set<MethodAndConditions> seenEntries = new HashSet<>();
+        return results.stream().filter(r -> {
+            MethodAndConditions methodAndConditions = new MethodAndConditions(r.method, r.conditions);
+            if (seenEntries.contains(methodAndConditions)) return false;
+            seenEntries.add(methodAndConditions);
+            return true;
+        }).toList();
     }
 
     // Maps Gen 8 Wild Area h4 section headers to method names.
@@ -426,26 +449,37 @@ public class BulbapediaClient {
             }
         }
 
-        if (format == ColumnFormat.SINGLE) {
-            int rate = extractSingleRate(row);
-            if (rate > 0 && method != null) {
-                return List.of(new LocationEncounterData(method, rate, Collections.emptyList()));
-            }
-            return Collections.emptyList();
-        }
+        return extractEncountersFromRow(row, format, method);
+    }
 
+    private static List<LocationEncounterData> extractEncountersFromRow(Element row, ColumnFormat format, String method) {
+        if (format == ColumnFormat.SINGLE) return getEncountersForSingleCatchRateRow(row, method);
+
+        List<LocationEncounterData> multicolumnFormatRows = getEncountersForMultiColumnCatchRate(row, method);
+        if(!multicolumnFormatRows.isEmpty()) return multicolumnFormatRows;
+        return getEncountersForSingleCatchRateRow(row, method);
+    }
+
+    private static List<LocationEncounterData> getEncountersForMultiColumnCatchRate(Element row, String method) {
         // For time-of-day and weather: each colored <td> maps to a condition
-        String finalMethod = method;
         return row.select("td").stream()
                 .map(td -> {
                     String condition = extractConditionFromStyle(td.attr("style"));
                     if (condition == null) return null;
                     int rate = extractRateFromCell(td);
-                    if (rate <= 0 || finalMethod == null) return null;
-                    return new LocationEncounterData(finalMethod, rate, List.of(condition));
+                    if (rate <= 0 || method == null) return null;
+                    return new LocationEncounterData(method, rate, List.of(condition));
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    private static List<LocationEncounterData> getEncountersForSingleCatchRateRow(Element row, String method) {
+        int rate = extractSingleRate(row);
+        if (rate > 0 && method != null) {
+            return List.of(new LocationEncounterData(method, rate, Collections.emptyList()));
+        }
+        return Collections.emptyList();
     }
 
     // Returns the first positive percentage found in any <td> of the row.
@@ -625,8 +659,10 @@ public class BulbapediaClient {
 
             for (String game : matchedGames) {
                 for (List<String[]> group : brGroups) {
-                    String groupMethod = extractGroupMethod(group);
-                    List<String[]> strippedGroup = stripGroupMethod(group, groupMethod);
+                    String groupDayConditions = extractGroupDayConditions(group);
+                    List<String[]> strippedGroupOfDayConditions = stripGroupDayConditions(group, groupDayConditions);
+                    String groupMethod = extractGroupMethod(strippedGroupOfDayConditions);
+                    List<String[]> strippedGroup = stripGroupMethod(strippedGroupOfDayConditions, groupMethod);
                     String[] cleanedTexts = calculateCleanEncounterTexts(strippedGroup);
 
                     for (int i = 0; i < strippedGroup.size(); i++) {
@@ -649,7 +685,7 @@ public class BulbapediaClient {
                         encounter.setCleanedUpEncounterText(cleanedTexts[i]);
                         // Use pattern-matched location if available, else fall back to the cleaned text
                         encounter.setLocation(details.location() != null ? details.location() : cleanedTexts[i]);
-                        encounter.setConditions(details.conditions());
+                        encounter.setConditions(Stream.concat(Optional.ofNullable(details.conditions()).stream().flatMap(c -> c.stream()), Stream.of(groupDayConditions)).toList());
                         encounter.setMethod(finalMethod);
                         encounter.setCatchRate(details.catchRate());
                         encounters.add(encounter);
@@ -659,6 +695,28 @@ public class BulbapediaClient {
         }
 
         return encounters;
+    }
+
+    private List<String[]> stripGroupDayConditions(List<String[]> group, String groupDayConditions) {
+        if (groupDayConditions == null) return group;
+        List<String[]> result = new ArrayList<>(group);
+        String[] last = result.get(result.size() - 1);
+        result.set(result.size() - 1, new String[]{last[0], last[1].replaceFirst("(Mo|Tu|We|Th|Fr|Sa|Su)+$", "")});
+        return result;
+    }
+
+    private String extractGroupDayConditions(List<String[]> group) {
+        if (group.isEmpty()) return null;
+        var lastEntry = group.get(group.size() - 1);
+        var lastHtml = lastEntry[0];
+        if(!lastHtml.contains("/wiki/Days_of_the_week")) return null;
+
+        Matcher m = DAYS.matcher(lastEntry[1]);
+        List<String> days = new ArrayList<>();
+        while (m.find()) {
+            days.add(m.group());
+        }
+        return days.stream().map(d -> DAY_ABBREVIATIONS.getOrDefault(d, d)).collect(Collectors.joining(" or "));
     }
 
     private static String[] calculateCleanEncounterTexts(List<String[]> parts) {
@@ -680,7 +738,7 @@ public class BulbapediaClient {
 
     private List<List<String[]>> splitByBrThenComma(Element element) {
         return splitNodesByBr(element).stream()
-                .map(this::commaSplitNodes)
+                .map(this::commaOrAndSplitNodes)
                 .filter(group -> !group.isEmpty())
                 .collect(Collectors.toList());
     }
@@ -700,7 +758,7 @@ public class BulbapediaClient {
         return groups;
     }
 
-    private List<String[]> commaSplitNodes(List<Node> nodes) {
+    private List<String[]> commaOrAndSplitNodes(List<Node> nodes) {
         List<String[]> parts = new ArrayList<>();
         StringBuilder currentHtml = new StringBuilder();
         StringBuilder currentText = new StringBuilder();
@@ -710,8 +768,8 @@ public class BulbapediaClient {
                 currentHtml.append(el.outerHtml());
                 currentText.append(el.text());
             } else if (node instanceof TextNode tn) {
-                String[] htmlParts = tn.outerHtml().split(",", -1);
-                String[] textParts = tn.text().split(",", -1);
+                String[] htmlParts = tn.outerHtml().split(",| and ", -1);
+                String[] textParts = tn.text().split(",| and ", -1);
                 for (int i = 0; i < htmlParts.length; i++) {
                     if (i > 0) {
                         flushSegment(parts, currentHtml, currentText);
@@ -849,6 +907,7 @@ public class BulbapediaClient {
     }
 
     private record LocationEncounterData(String method, int catchRate, List<String> conditions) {}
+
 
     private enum ColumnFormat { SINGLE, DAY_NIGHT, MORNING_DAY_NIGHT, MORNING_DAY_EVENING_NIGHT, WEATHER }
 }
