@@ -115,7 +115,7 @@ public class BulbapediaClient {
 
     private static final List<String> METHODS_WITH_SPECIFIC_TABLE_LOCATIONS = List.of("Bug-Catching Contest");
 
-    private static final List<String> METHODS_TO_IGNORE = List.of("Bug-Catching Contest");
+    private static final List<String> METHODS_TO_IGNORE = List.of("Bug-Catching Contest", "SOS Battle");
 
     // ── Phase 1: text-pattern matching for known encounter types ─────────────
 
@@ -202,7 +202,7 @@ public class BulbapediaClient {
     // td background-color → condition label. Used to identify time-of-day and weather rate cells.
     // Colors are lower-cased for case-insensitive matching against style attribute values.
     private static final Map<String, String> CONDITION_CELL_COLORS = new LinkedHashMap<>();
-    public static final String STYLE_OF_POKEMON_ROW = "text-align:center;";
+    public static final String STYLE_OF_POKEMON_ROW = "text-align:center";
 
     static {
         // Time-of-day (Gen 2, 4, 7, 8 BDSP)
@@ -232,6 +232,13 @@ public class BulbapediaClient {
 
     private static final Pattern BG_COLOR_PATTERN = Pattern.compile(
             "background(?:-color)?\\s*:\\s*(#[0-9a-fA-F]{3,8})", Pattern.CASE_INSENSITIVE);
+
+    private static final Map<String, String> GAME_TO_ALTERNATIVE_HEADING_SELECTOR = Map.of(
+            "Sun", "span[id^='Pokémon_Sun_and_Moon']",
+            "Moon", "span[id^='Pokémon_Sun_and_Moon']",
+            "Ultra Moon", "span[id^='Pokémon_Ultra_Sun_and_Ultra_Moon']",
+            "Ultra Sun", "span[id^='Pokémon_Ultra_Sun_and_Ultra_Moon']"
+    );
 
     private static final int LIMIT = 20;
 
@@ -411,32 +418,56 @@ public class BulbapediaClient {
         var pokemonHeading = doc.selectFirst(":has(>span#Pokémon)");
         if(pokemonHeading == null) return List.of();
         Element genHeading = pokemonHeading.nextElementSibling();
-        // If game is sun or moon, if this is null look for Pokémon Sun and Moon
-        // for ultra it's Pokémon Ultra Sun and Ultra Moon
-        // might need to grab multiple tables like here?
+        // might need to grab multiple tables like here? Only need to do it for certain games maybe?
         // https://bulbapedia.bulbagarden.net/wiki/Alola_Route_1
-        while (genHeading != null && genHeading.selectFirst("span[id^='Generation_" + GameToGeneration.get(game) + "']") == null) {
+        String headingSelector = GAME_TO_ALTERNATIVE_HEADING_SELECTOR.getOrDefault(game, "span[id^='Generation_" + GameToGeneration.get(game) + "']");
+        while (genHeading != null) {
+            if (!(genHeading.selectFirst(headingSelector) == null)) break;
             genHeading = genHeading.nextElementSibling();
         }
 
         var previousElement = genHeading != null ? genHeading : pokemonHeading;
-        Element table = previousElement.nextElementSibling();
-        while (table != null && !table.tagName().equals("table")) {
-            table = table.nextElementSibling();
-        }
 
-        if (table == null) return List.of();
+        // Would it be better to look at all rows in tbodys that have the right pokemon? Can then check the game.
+        // Would just need to ignore the bug catching ones, or ignore gold, silver, HG SS
 
-        ColumnFormat format = detectColumnFormat(table);
-        List<Element> rows = findPokemonRows(table, pokemonName, abbreviation, location, method);
-        for (Element row : rows) {
-            results.addAll(extractFromRow(row, format, method));
-        }
+        var tables = pokemonTables(previousElement, game);
 
+        tables.forEach(table -> {
+            ColumnFormat format = detectColumnFormat(table);
+            List<Element> rows = findPokemonRows(table, pokemonName, abbreviation, location, method);
+            for (Element row : rows) {
+                results.addAll(extractFromRow(row, format, method));
+            }
+        });
 
         results.sort(Comparator.comparing(LocationEncounterData::catchRate).reversed());
 
         return resultsWithDuplicatesRemoved(results);
+    }
+
+    private static List<Element> pokemonTables(Element startingElement, String game) {
+        // For sun and moon, need to get all tables
+        if(game.equals("Sun") || game.equals("Moon")) {
+            Element currentElement = startingElement;
+            String stoppingElementSelector = GAME_TO_ALTERNATIVE_HEADING_SELECTOR.get("Ultra Sun");
+            List<Element> tables = new ArrayList<>();
+            while(currentElement != null) {
+                if (currentElement.selectFirst(stoppingElementSelector) != null) break;
+                if(currentElement.tagName().equals("table") &&
+                        Optional.ofNullable(currentElement.selectFirst("th")).map(e -> e.text().trim().equals("Pokémon")).isPresent()) {
+                    tables.add(currentElement);
+                }
+                currentElement = currentElement.nextElementSibling();
+            }
+            return tables;
+        }
+
+        Element table = startingElement;
+        while (table != null && !table.tagName().equals("table")) {
+            table = table.nextElementSibling();
+        }
+        return table == null ? List.of() : List.of(table);
     }
 
     private static List<LocationEncounterData> resultsWithDuplicatesRemoved(List<LocationEncounterData> results) {
@@ -493,12 +524,13 @@ public class BulbapediaClient {
         Elements rows = Optional.ofNullable(table.selectFirst("tbody")).map(Element::children).orElse(new Elements());
         if (rows.isEmpty()) return Collections.emptyList();
 
-        String targetTitle = pokemonName + " (Pokémon)";
+        String titleSuffix = "(Pokémon)";
+        String targetTitle = pokemonName + " " + titleSuffix;
         Map<String, List<Element>> subTablesToRows = new HashMap<>();
         String previouslySeenHeading = null;
         for (Element row : rows) {
-            String style = row.attr("style");
-            if (STYLE_OF_POKEMON_ROW.equals(style)) {
+            var potentialPokemonRow = Optional.ofNullable(row.selectFirst("a[title$='" + titleSuffix + "']"));
+            if (potentialPokemonRow.isPresent()) {
                 if (row.select("a").stream()
                         .anyMatch(a -> targetTitle.equals(a.attr("title"))) && elementHasGameRowSelected(row, gameAbbreviation)) {
                     subTablesToRows.getOrDefault(previouslySeenHeading, new ArrayList<>()).add(row);
