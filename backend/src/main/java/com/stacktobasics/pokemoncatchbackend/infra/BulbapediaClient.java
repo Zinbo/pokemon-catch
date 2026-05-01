@@ -111,9 +111,11 @@ public class BulbapediaClient {
     );
 
     private static final List<String> IGNORED_ENCOUNTERS = List.of("Trade", "Time Capsule", "Pokémon HOME", "Wild Area News", "Global Link", "Poké Transfer", "Event", "Global Link Event", "Pokémon HOME Event", "Unobtainable");
-    private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari");
+    private static final List<String> IGNORED_ENCOUNTERS_STARTS_WITH = List.of("TradeVersion", "Evolve", "Friend Safari", "Breed");
 
     private static final List<String> METHODS_WITH_SPECIFIC_TABLE_LOCATIONS = List.of("Bug-Catching Contest");
+
+    private static final List<String> METHODS_TO_IGNORE = List.of("Bug-Catching Contest");
 
     // ── Phase 1: text-pattern matching for known encounter types ─────────────
 
@@ -409,6 +411,10 @@ public class BulbapediaClient {
         var pokemonHeading = doc.selectFirst(":has(>span#Pokémon)");
         if(pokemonHeading == null) return List.of();
         Element genHeading = pokemonHeading.nextElementSibling();
+        // If game is sun or moon, if this is null look for Pokémon Sun and Moon
+        // for ultra it's Pokémon Ultra Sun and Ultra Moon
+        // might need to grab multiple tables like here?
+        // https://bulbapedia.bulbagarden.net/wiki/Alola_Route_1
         while (genHeading != null && genHeading.selectFirst("span[id^='Generation_" + GameToGeneration.get(game) + "']") == null) {
             genHeading = genHeading.nextElementSibling();
         }
@@ -708,21 +714,21 @@ public class BulbapediaClient {
 
     record GroupEncounterDetails(GroupedEncounters groupedEncounters, String method, String location, List<String> conditions, int catchRate){}
 
-    private GroupEncounterDetails extractAndStripGroupedEncounterInfo(GroupedEncounters groupedEncounters) {
+    private Optional<GroupEncounterDetails> extractAndStripGroupedEncounterInfo(GroupedEncounters groupedEncounters) {
         // Check first for special encounters
         List<HtmlAndTextPair> encounters = groupedEncounters.encounters;
-        if(encounters.isEmpty()) return new GroupEncounterDetails(groupedEncounters, null, null, List.of(), 0);
+        if(encounters.isEmpty()) return Optional.of(new GroupEncounterDetails(groupedEncounters, null, null, List.of(), 0));
         int allButLastSize = encounters.size() - 1;
         var lastEncounterInGroup = encounters.get(allButLastSize);
         Matcher islandScan = ISLAND_SCAN.matcher(lastEncounterInGroup.text);
         if (islandScan.matches()) {
-            return new GroupEncounterDetails(groupedEncounters,"Island Scan", islandScan.group(1).trim(), null, 100);
+            return Optional.of(new GroupEncounterDetails(groupedEncounters,"Island Scan", islandScan.group(1).trim(), null, 100));
         }
 
         // Dual Slot required
         Matcher dualSlot = DUAL_SLOT.matcher(lastEncounterInGroup.text);
         if (dualSlot.matches()) {
-            return new GroupEncounterDetails(groupedEncounters,"Walking", dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0);
+            return Optional.of(new GroupEncounterDetails(groupedEncounters,"Walking", dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0));
         }
 
         List<String> conditions = new ArrayList<>();
@@ -756,6 +762,8 @@ public class BulbapediaClient {
         // log anything left here in parentheses
         Matcher parenMatcher = PAREN_METHOD_SUFFIX.matcher(lastText);
         if (parenMatcher.matches()) {
+            var unknownMethod = m.group(2);
+            if(METHODS_TO_IGNORE.contains(unknownMethod)) return Optional.empty();
             log.info("Found unexpected condition/method/info: {}", lastText);
         }
 
@@ -775,7 +783,7 @@ public class BulbapediaClient {
             newPairs.add(new HtmlAndTextPair(existingEncounter.html, cleanedTexts[i]));
         }
 
-        return new GroupEncounterDetails(new GroupedEncounters(newPairs), method, null, conditions, 0);
+        return Optional.of(new GroupEncounterDetails(new GroupedEncounters(newPairs), method, null, conditions, 0));
     }
 
     private List<Encounter> parseGameLocationsHtml(String html, PokemonEntry entry) {
@@ -816,8 +824,10 @@ public class BulbapediaClient {
             for (String game : matchedGames) {
                 for (GroupedEncounters groupedEncounters : encounterGroupsForLocation.groups) {
 
-                    var groupDetails = extractAndStripGroupedEncounterInfo(groupedEncounters);
+                    var potentialGroupDetails = extractAndStripGroupedEncounterInfo(groupedEncounters);
+                    if(potentialGroupDetails.isEmpty()) continue;
 
+                    var groupDetails = potentialGroupDetails.get();
                     var encountersInGroup = groupDetails.groupedEncounters.encounters;
 
                     for (int i = 0; i < encountersInGroup.size(); i++) {
