@@ -14,7 +14,6 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -124,7 +123,7 @@ public class BulbapediaClient {
     );
 
     private static final Set<String> GROUP_LEVEL_METHODS = Set.of(
-            "Max Raid Battle", "Tera Raid Battle", "Dynamax Adventure", "Bug-Catching Contest"
+            "Max Raid Battle", "Tera Raid Battle", "Dynamax Adventure", "After obtaining the National Pokédex", "SOS Battle"
     );
 
     private static final Pattern GIFT_FIRST_PARTNER = Pattern.compile(
@@ -277,7 +276,7 @@ public class BulbapediaClient {
                 log.warn("Interrupted while populating encounters, stopping");
                 return;
             } catch (Exception e) {
-                log.error("Error processing {}: {}", entry.name(), e.getMessage());
+                log.error("Error processing {}: {}", entry.name(), e.getMessage(), e);
             }
         }
 
@@ -407,7 +406,7 @@ public class BulbapediaClient {
         String abbreviation = GAME_TO_ABBREVIATION.getOrDefault(game, game);
         List<LocationEncounterData> results = new ArrayList<>();
 
-        var pokemonHeading = doc.selectFirst("span#Pokémon");
+        var pokemonHeading = doc.selectFirst(":has(>span#Pokémon)");
         if(pokemonHeading == null) return List.of();
         Element genHeading = pokemonHeading.nextElementSibling();
         while (genHeading != null && genHeading.selectFirst("span[id^='Generation_" + GameToGeneration.get(game) + "']") == null) {
@@ -421,8 +420,6 @@ public class BulbapediaClient {
         }
 
         if (table == null) return List.of();
-
-        if (!elementHasGameRowSelected(table, abbreviation)) return List.of();
 
         ColumnFormat format = detectColumnFormat(table);
         List<Element> rows = findPokemonRows(table, pokemonName, abbreviation, location, method);
@@ -449,25 +446,22 @@ public class BulbapediaClient {
         }).toList();
     }
 
-    // Maps Gen 8 Wild Area h4 section headers to method names.
-    private static String sectionHeaderToMethod(String headerText) {
-        return switch (headerText) {
-            case "Hidden encounters" -> "Walking (Hidden)";
-            case "Visible encounters" -> "Walking (Overworld)";
-            case "Wanderers" -> "Wanderer";
-            default -> null;
-        };
-    }
-
     // Returns true if any <th> in the table has text exactly matching the game abbreviation.
     // Game version indicators always appear as the sole text content of a <th> element.
     private static boolean elementHasGameRowSelected(Element table, String abbreviation) {
         for (Element th : table.select("th")) {
             var isForRightGame = th.text().trim().equals(abbreviation);
             if (!isForRightGame) continue;
-            var styleComponents = th.attr("style").split(":");
-            var hasColouredBackground = styleComponents.length == 2 && !styleComponents[1].startsWith("#FFF");
-            if (hasColouredBackground) return true;
+            Map<String, String> styleMap = Arrays.stream(th.attr("style").split(";"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(s -> s.split(":", 2)) // split into [key, value]
+                    .collect(Collectors.toMap(
+                            arr -> arr[0].trim(),
+                            arr -> arr[1].trim()
+                    ));
+            var hasGreyedOutBackground = Optional.ofNullable(styleMap.get("background")).map(s -> s.startsWith("#FFF")).orElse(false);
+            if (!hasGreyedOutBackground) return true;
         }
         return false;
     }
@@ -514,7 +508,7 @@ public class BulbapediaClient {
             if ((method != null && METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(method) && METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(heading)) ||
                     ((method == null || !METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(method)) && !METHODS_WITH_SPECIFIC_TABLE_LOCATIONS.contains(heading))){
                 value.forEach(row -> {
-                        log.info("Found match for pokemon {} for game {} and location: {}: {}", pokemonName, gameAbbreviation, location, row.html());
+                        log.info("Found match for pokemon {} for game {} and location: {}", pokemonName, gameAbbreviation, location);
                         results.add(row);
                 });
 
@@ -712,22 +706,23 @@ public class BulbapediaClient {
         return Optional.empty();
     }
 
-    record GroupEncounterDetails(String method, String location, List<String> conditions, int catchRate){}
+    record GroupEncounterDetails(GroupedEncounters groupedEncounters, String method, String location, List<String> conditions, int catchRate){}
 
     private GroupEncounterDetails extractAndStripGroupedEncounterInfo(GroupedEncounters groupedEncounters) {
         // Check first for special encounters
         List<HtmlAndTextPair> encounters = groupedEncounters.encounters;
-        if(encounters.isEmpty()) return new GroupEncounterDetails(null, null, List.of(), 0);
-        var lastEncounterInGroup = encounters.get(encounters.size()-1);
+        if(encounters.isEmpty()) return new GroupEncounterDetails(groupedEncounters, null, null, List.of(), 0);
+        int allButLastSize = encounters.size() - 1;
+        var lastEncounterInGroup = encounters.get(allButLastSize);
         Matcher islandScan = ISLAND_SCAN.matcher(lastEncounterInGroup.text);
         if (islandScan.matches()) {
-            return new GroupEncounterDetails("Island Scan", islandScan.group(1).trim(), null, 100);
+            return new GroupEncounterDetails(groupedEncounters,"Island Scan", islandScan.group(1).trim(), null, 100);
         }
 
         // Dual Slot required
         Matcher dualSlot = DUAL_SLOT.matcher(lastEncounterInGroup.text);
         if (dualSlot.matches()) {
-            return new GroupEncounterDetails("Walking", dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0);
+            return new GroupEncounterDetails(groupedEncounters,"Walking", dualSlot.group(1).trim(), List.of(dualSlot.group(2).trim() + " in Slot 2"), 0);
         }
 
         List<String> conditions = new ArrayList<>();
@@ -764,30 +759,27 @@ public class BulbapediaClient {
             log.info("Found unexpected condition/method/info: {}", lastText);
         }
 
-        encounters.remove(encounters.size()-1);
-        encounters.add(new HtmlAndTextPair(lastEncounterInGroup.html, lastText));
-
         // clean up text with calculateCleanEncounterTexts(strippedGroup) and change text.
         String[] cleanedTexts = new String[encounters.size()];
         String previousLocationType = null;
-        for (int i = 0; i < encounters.size(); i++) {
+        for (int i = 0; i < allButLastSize; i++) {
             cleanedTexts[i] = computeCleanedEncounterText(encounters.get(i).text, previousLocationType);
             String newType = extractLocationType(cleanedTexts[i]);
             if (newType != null) previousLocationType = newType;
         }
+        cleanedTexts[allButLastSize] = computeCleanedEncounterText(lastText, previousLocationType);
 
         List<HtmlAndTextPair> newPairs = new ArrayList<>();
         for (int i = 0; i < encounters.size(); i++) {
             HtmlAndTextPair existingEncounter = encounters.get(i);
             newPairs.add(new HtmlAndTextPair(existingEncounter.html, cleanedTexts[i]));
         }
-        groupedEncounters.encounters = newPairs;
 
-        return new GroupEncounterDetails(method, null, conditions, 0);
+        return new GroupEncounterDetails(new GroupedEncounters(newPairs), method, null, conditions, 0);
     }
 
     private List<Encounter> parseGameLocationsHtml(String html, PokemonEntry entry) {
-        List<Encounter> encounters = new ArrayList<>();
+        List<Encounter> parsedEncounters = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
         for (Element row : doc.select("tr")) {
@@ -821,29 +813,23 @@ public class BulbapediaClient {
             if (matchedGames.isEmpty()) continue;
 
             EncounterGroupsForLocation encounterGroupsForLocation = getGroupedEncountersForLocationFromElement(contentCell);
-
             for (String game : matchedGames) {
                 for (GroupedEncounters groupedEncounters : encounterGroupsForLocation.groups) {
-                    //  Extract out special encounter information from group (island scan, etc.)
-                    // Extract out groups and conditions
 
-                    // Try out new extractAndStripGroupedEncounterInfo method
+                    var groupDetails = extractAndStripGroupedEncounterInfo(groupedEncounters);
 
-                    String groupDayConditions = extractGroupDayConditions(groupedEncounters);
-                    List<String[]> strippedGroupOfDayConditions = stripDayInfo(groupedEncounters, groupDayConditions);
-                    String groupMethod = extractGroupMethod(strippedGroupOfDayConditions);
-                    List<String[]> strippedGroup = stripGroupMethod(strippedGroupOfDayConditions, groupMethod);
-                    String[] cleanedTexts = calculateCleanEncounterTexts(strippedGroup);
+                    var encountersInGroup = groupDetails.groupedEncounters.encounters;
 
-                    for (int i = 0; i < strippedGroup.size(); i++) {
-                        String encounterHtml = strippedGroup.get(i)[0].trim();
-                        String encounterText = strippedGroup.get(i)[1].trim();
+                    for (int i = 0; i < encountersInGroup.size(); i++) {
+                        var encounterLocation = encountersInGroup.get(i);
+                        String encounterHtml = encounterLocation.html.trim();
+                        String encounterText = encounterLocation.text.trim();
                         if (encounterText.isBlank()) continue;
                         if (IGNORED_ENCOUNTERS.contains(encounterText) ||
                                 IGNORED_ENCOUNTERS_STARTS_WITH.stream().anyMatch(encounterText::startsWith)) continue;
 
-                        ParsedDetails details = parseEncounterDetails(cleanedTexts[i]);
-                        String finalMethod = details.method() != null ? details.method() : groupMethod;
+                        ParsedDetails details = parseEncounterDetails(encounterText);
+                        String finalMethod = details.method() != null ? details.method() : groupDetails.method;
 
                         Encounter encounter = new Encounter();
                         encounter.setId(UUID.randomUUID());
@@ -852,57 +838,20 @@ public class BulbapediaClient {
                         encounter.setGame(game);
                         encounter.setEncounterHtml(encounterHtml);
                         encounter.setEncounterText(encounterText);
-                        encounter.setCleanedUpEncounterText(cleanedTexts[i]);
+                        encounter.setCleanedUpEncounterText(encounterText);
                         // Use pattern-matched location if available, else fall back to the cleaned text
-                        encounter.setLocation(details.location() != null ? details.location() : cleanedTexts[i]);
-                        var conditions = Stream.concat(Optional.ofNullable(details.conditions()).stream().flatMap(Collection::stream), StringUtils.hasText(groupDayConditions) ? Stream.of(groupDayConditions) : Stream.empty()).toList();
+                        encounter.setLocation(details.location() != null ? details.location() : groupDetails.location != null ? groupDetails.location : encounterText);
+                        var conditions = Stream.concat(Optional.ofNullable(details.conditions()).stream().flatMap(Collection::stream), groupDetails.conditions != null ? groupDetails.conditions.stream() : Stream.empty()).toList();
                         encounter.setConditions(conditions);
                         encounter.setMethod(finalMethod);
-                        encounter.setCatchRate(details.catchRate());
-                        encounters.add(encounter);
+                        encounter.setCatchRate(details.catchRate() > 0 ? details.catchRate : groupDetails.catchRate);
+                        parsedEncounters.add(encounter);
                     }
                 }
             }
         }
 
-        return encounters;
-    }
-
-    private List<String[]> stripDayInfo(List<String[]> group, String groupDayConditions) {
-        List<String[]> result = new ArrayList<>(group);
-        if (groupDayConditions != null) {
-            String[] last = result.get(result.size() - 1);
-            result.set(result.size() - 1, new String[]{last[0], last[1].replaceFirst("(Mo|Tu|We|Th|Fr|Sa|Su)+$", "")});
-        }
-        String[] last = result.get(result.size() - 1);
-        result.set(result.size() - 1, new String[]{last[0], last[1].replaceAll("(Morning|Day)$", "")});
-
-        return result;
-    }
-
-    private String extractGroupDayConditions(List<String[]> group) {
-        if (group.isEmpty()) return null;
-        var lastEntry = group.get(group.size() - 1);
-        var lastHtml = lastEntry[0];
-        if (!lastHtml.contains("/wiki/Days_of_the_week")) return null;
-
-        Matcher m = DAYS.matcher(lastEntry[1]);
-        List<String> days = new ArrayList<>();
-        while (m.find()) {
-            days.add(m.group());
-        }
-        return days.stream().map(d -> DAY_ABBREVIATIONS.getOrDefault(d, d)).collect(Collectors.joining(" or "));
-    }
-
-    private static String[] calculateCleanEncounterTexts(List<String[]> parts) {
-        String[] cleanedTexts = new String[parts.size()];
-        String previousLocationType = null;
-        for (int i = 0; i < parts.size(); i++) {
-            cleanedTexts[i] = computeCleanedEncounterText(parts.get(i)[1].trim(), previousLocationType);
-            String newType = extractLocationType(cleanedTexts[i]);
-            if (newType != null) previousLocationType = newType;
-        }
-        return cleanedTexts;
+        return parsedEncounters;
     }
 
     private List<String> findMatchingGames(List<String> gameNames) {
@@ -976,29 +925,6 @@ public class BulbapediaClient {
         if (!t.isBlank()) {
             parts.add(new String[]{html.toString().trim(), t});
         }
-    }
-
-    private static String extractGroupMethod(List<String[]> group) {
-        if (group.isEmpty()) return null;
-        String lastText = group.get(group.size() - 1)[1];
-        Matcher m = PAREN_METHOD_SUFFIX.matcher(lastText.trim());
-        if (m.matches() && GROUP_LEVEL_METHODS.contains(m.group(2))) {
-            return m.group(2);
-        }
-        return null;
-    }
-
-    private static List<String[]> stripGroupMethod(List<String[]> group, String method) {
-        if (method == null) return group;
-        List<String[]> result = new ArrayList<>(group);
-        String[] last = result.get(result.size() - 1);
-        Matcher m = PAREN_METHOD_SUFFIX.matcher(last[1].trim());
-        if (m.matches()) {
-            String strippedText = m.group(1).trim();
-            String strippedHtml = last[0].replace("(" + method + ")", "").trim();
-            result.set(result.size() - 1, new String[]{strippedHtml, strippedText});
-        }
-        return result;
     }
 
     // Extracts structured encounter details from cleaned encounter text.
